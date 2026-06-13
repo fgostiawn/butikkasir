@@ -71,6 +71,14 @@
                 android:textColor="@color/colorPrimary"
                 android:textSize="15sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvStokBarang"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Stok: 10"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <!-- Tombol tambah -->

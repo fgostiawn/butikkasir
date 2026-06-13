@@ -44,6 +44,23 @@
                 android:layout_marginBottom="8dp"
                 android:paddingHorizontal="4dp" />
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Cari barang..."
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                app:startIconDrawable="@android:drawable/ic_menu_search">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etCariBarang"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:imeOptions="actionSearch"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 android:id="@+id/tvEmptyKatalog"
                 android:layout_width="match_parent"
@@ -84,15 +101,37 @@
                 android:layout_marginBottom="4dp"
                 android:background="@color/outlineColor" />
 
-            <TextView
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Keranjang Belanja"
-                android:textColor="@color/colorPrimary"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:textAlignment="center"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Keranjang Belanja"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textAlignment="center"
+                    android:layout_centerInParent="true" />
+
+                <TextView
+                    android:id="@+id/tvKeranjangBadge"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_circle"
+                    android:backgroundTint="@color/colorPrimary"
+                    android:gravity="center"
+                    android:text="0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvKeranjang"

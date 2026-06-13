@@ -43,6 +43,9 @@ import java.util.Locale;
 
 public class PaymentActivity extends AppCompatActivity {
 
+    private static final String NAMA_TOKO = "BUTIK DEA";
+    private static final String NOMOR_WA   = "0812-XXXX-XXXX";
+
     private double totalBelanja;
     private String detailTransaksi;
     private List<CartItem> cartItems;
@@ -66,6 +69,22 @@ public class PaymentActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         ((TextView) findViewById(R.id.payTvTotal)).setText(CurrencyFormatter.formatRupiah(totalBelanja));
+
+        // Populate ringkasan belanja
+        LinearLayout payItemContainer = findViewById(R.id.payItemContainer);
+        for (CartItem item : cartItems) {
+            TextView tv = new TextView(this);
+            tv.setText("• " + item.getBarang().getNamaBarang()
+                    + " (" + item.getUkuran() + ") × " + item.getQuantity()
+                    + "  =  " + CurrencyFormatter.formatRupiah(item.getSubtotal()));
+            tv.setTextColor(0xFF424242);
+            tv.setTextSize(13f);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = (int)(6 * getResources().getDisplayMetrics().density);
+            tv.setLayoutParams(lp);
+            payItemContainer.addView(tv);
+        }
 
         findViewById(R.id.payBtnCash).setOnClickListener(v -> dialogCash());
         findViewById(R.id.payBtnDebit).setOnClickListener(v -> dialogDebit());
@@ -390,7 +409,7 @@ public class PaymentActivity extends AppCompatActivity {
         String tanggal = new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID"))
                 .format(new Date());
         StringBuilder sb = new StringBuilder();
-        sb.append("*BUTIK KASIR*\n");
+        sb.append("*" + NAMA_TOKO + "*\n");
         sb.append("Struk #").append(transId).append("\n\n");
         sb.append("Tanggal : ").append(tanggal).append("\n");
         sb.append("Kasir   : ").append(kasirName).append("\n\n");
@@ -445,7 +464,7 @@ public class PaymentActivity extends AppCompatActivity {
 
     private String buildTextReceipt(long transId) {
         StringBuilder sb = new StringBuilder();
-        sb.append("====== BUTIK KASIR ======\n");
+        sb.append("====== " + NAMA_TOKO + " ======\n");
         sb.append("No. Transaksi : #").append(transId).append("\n");
         sb.append("Tanggal       : ")
           .append(new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID")).format(new Date()))

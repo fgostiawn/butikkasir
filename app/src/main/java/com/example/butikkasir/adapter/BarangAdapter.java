@@ -1,5 +1,6 @@
 package com.example.butikkasir.adapter;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,12 +12,13 @@ import com.example.butikkasir.R;
 import com.example.butikkasir.model.Barang;
 import com.example.butikkasir.utils.CurrencyFormatter;
 import com.google.android.material.button.MaterialButton;
+import java.util.ArrayList;
 import java.util.List;
 
 public class BarangAdapter extends RecyclerView.Adapter<BarangAdapter.BarangViewHolder> {
 
-    private List<Barang> listBarang;
-    private OnItemClickListener listener;
+    private final List<Barang> listBarang;
+    private final OnItemClickListener listener;
 
     public interface OnItemClickListener {
         void onBarangClick(Barang barang);
@@ -39,10 +41,20 @@ public class BarangAdapter extends RecyclerView.Adapter<BarangAdapter.BarangView
         Barang barang = listBarang.get(position);
         holder.tvNama.setText(barang.getNamaBarang());
         holder.tvDetail.setText(barang.getDetailBarang());
-
-        // Memanggil format rupiah yang baru dibuat
         holder.tvHarga.setText(CurrencyFormatter.formatRupiah(barang.getHarga()));
         holder.imgBarang.setImageResource(barang.getGambarResId());
+
+        int stok = barang.getStok();
+        if (stok > 10) {
+            holder.tvStok.setText("Stok: " + stok);
+            holder.tvStok.setTextColor(Color.parseColor("#4CAF50"));
+        } else if (stok > 3) {
+            holder.tvStok.setText("Stok: " + stok);
+            holder.tvStok.setTextColor(Color.parseColor("#FF9800"));
+        } else {
+            holder.tvStok.setText("Stok: " + stok + " (hampir habis)");
+            holder.tvStok.setTextColor(Color.parseColor("#F44336"));
+        }
 
         holder.btnPilih.setOnClickListener(v -> listener.onBarangClick(barang));
         holder.itemView.setOnClickListener(v -> listener.onBarangClick(barang));
@@ -55,7 +67,7 @@ public class BarangAdapter extends RecyclerView.Adapter<BarangAdapter.BarangView
 
     public static class BarangViewHolder extends RecyclerView.ViewHolder {
         ImageView imgBarang;
-        TextView tvNama, tvDetail, tvHarga;
+        TextView tvNama, tvDetail, tvHarga, tvStok;
         MaterialButton btnPilih;
 
         public BarangViewHolder(@NonNull View itemView) {
@@ -64,6 +76,7 @@ public class BarangAdapter extends RecyclerView.Adapter<BarangAdapter.BarangView
             tvNama = itemView.findViewById(R.id.tvNamaBarang);
             tvDetail = itemView.findViewById(R.id.tvDetailBarang);
             tvHarga = itemView.findViewById(R.id.tvHargaBarang);
+            tvStok = itemView.findViewById(R.id.tvStokBarang);
             btnPilih = itemView.findViewById(R.id.btnTambahKeranjang);
         }
     }

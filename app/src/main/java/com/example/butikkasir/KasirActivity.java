@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -16,7 +18,9 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -30,6 +34,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,17 +42,19 @@ import java.util.List;
 public class KasirActivity extends AppCompatActivity {
 
     private RecyclerView rvBarang, rvKeranjang;
-    private TextView tvTotalTagihan, tvEmptyKatalog;
+    private TextView tvTotalTagihan, tvEmptyKatalog, tvKeranjangBadge;
+    private TextInputEditText etCariBarang;
     private MaterialButton btnLanjutPembayaran;
     private DatabaseHelper dbHelper;
 
     private final List<CartItem> cartList = new ArrayList<>();
     private final List<Barang> katalogList = new ArrayList<>();
+    private final List<Barang> katalogListFull = new ArrayList<>();
     private BarangAdapter barangAdapter;
     private KeranjangAdapter keranjangAdapter;
     private double totalBelanjaSekarang = 0.0;
 
-    private BottomSheetBehavior bottomSheetBehavior;
+    private BottomSheetBehavior<View> bottomSheetBehavior;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,22 +70,23 @@ public class KasirActivity extends AppCompatActivity {
         rvKeranjang = findViewById(R.id.rvKeranjang);
         tvTotalTagihan = findViewById(R.id.tvTotalTagihan);
         tvEmptyKatalog = findViewById(R.id.tvEmptyKatalog);
+        tvKeranjangBadge = findViewById(R.id.tvKeranjangBadge);
+        etCariBarang = findViewById(R.id.etCariBarang);
         btnLanjutPembayaran = findViewById(R.id.btnLanjutPembayaran);
 
         View bottomSheet = findViewById(R.id.bottomSheetKeranjang);
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
 
         setupKeranjang();
+        setupSearch();
+        setupSwipeDelete();
         loadKatalogDariDB();
 
-        // Aksi Tombol Lanjutkan Pembayaran
         btnLanjutPembayaran.setOnClickListener(v -> {
             if (cartList.isEmpty()) {
                 Toast.makeText(this, "Tas belanja kosong!", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            // Pindah ke Halaman Metode Pembayaran
             Intent intent = new Intent(KasirActivity.this, PaymentActivity.class);
             intent.putExtra("TOTAL_BELANJA", totalBelanjaSekarang);
             intent.putExtra("DETAIL_TRANSAKSI", generateDetailTransaksi());
@@ -87,36 +95,82 @@ public class KasirActivity extends AppCompatActivity {
         });
     }
 
-    private void loadKatalogDariDB() {
+    private void setupSearch() {
+        etCariBarang.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                applyFilter(s.toString().trim());
+            }
+        });
+    }
+
+    private void setupSwipeDelete() {
+        ItemTouchHelper.SimpleCallback swipeCallback = new ItemTouchHelper.SimpleCallback(
+                0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView rv,
+                                  @NonNull RecyclerView.ViewHolder vh,
+                                  @NonNull RecyclerView.ViewHolder target) { return false; }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                int pos = viewHolder.getAdapterPosition();
+                cartList.remove(pos);
+                keranjangAdapter.notifyItemRemoved(pos);
+                hitungTotal();
+                Toast.makeText(KasirActivity.this, "Item dihapus dari keranjang", Toast.LENGTH_SHORT).show();
+            }
+        };
+        new ItemTouchHelper(swipeCallback).attachToRecyclerView(rvKeranjang);
+    }
+
+    private void applyFilter(String query) {
         katalogList.clear();
+        if (query.isEmpty()) {
+            katalogList.addAll(katalogListFull);
+        } else {
+            String q = query.toLowerCase();
+            for (Barang b : katalogListFull) {
+                if (b.getNamaBarang().toLowerCase().contains(q)) katalogList.add(b);
+            }
+        }
+        if (barangAdapter != null) barangAdapter.notifyDataSetChanged();
+        boolean kosong = katalogList.isEmpty();
+        if (tvEmptyKatalog != null) tvEmptyKatalog.setVisibility(kosong ? View.VISIBLE : View.GONE);
+        if (rvBarang != null) rvBarang.setVisibility(kosong ? View.GONE : View.VISIBLE);
+    }
+
+    private void loadKatalogDariDB() {
+        katalogListFull.clear();
         Cursor c = dbHelper.getBarangAktif();
         if (c != null && c.moveToFirst()) {
             do {
                 int id         = c.getInt(c.getColumnIndexOrThrow("id_barang"));
                 String nama    = c.getString(c.getColumnIndexOrThrow("nama_barang"));
                 double harga   = c.getDouble(c.getColumnIndexOrThrow("harga"));
+                int stok       = c.getInt(c.getColumnIndexOrThrow("stok"));
                 String detail  = c.getString(c.getColumnIndexOrThrow("detail_barang"));
                 String ukuranStr = c.getString(c.getColumnIndexOrThrow("ukuran"));
                 if (detail == null) detail = "";
                 if (ukuranStr == null || ukuranStr.isEmpty()) ukuranStr = "S,M,L,XL";
                 String[] ukuran = ukuranStr.split(",");
                 for (int i = 0; i < ukuran.length; i++) ukuran[i] = ukuran[i].trim();
-                katalogList.add(new Barang(id, nama, detail, harga, R.mipmap.ic_launcher, ukuran));
+                katalogListFull.add(new Barang(id, nama, detail, harga, R.mipmap.ic_launcher, ukuran, stok));
             } while (c.moveToNext());
             c.close();
         }
+
+        String currentSearch = etCariBarang != null && etCariBarang.getText() != null
+                ? etCariBarang.getText().toString().trim() : "";
+        applyFilter(currentSearch);
 
         if (barangAdapter == null) {
             barangAdapter = new BarangAdapter(katalogList, this::tampilkanDetailBottomSheet);
             rvBarang.setLayoutManager(new LinearLayoutManager(this));
             rvBarang.setAdapter(barangAdapter);
-        } else {
-            barangAdapter.notifyDataSetChanged();
         }
-
-        boolean kosong = katalogList.isEmpty();
-        if (tvEmptyKatalog != null) tvEmptyKatalog.setVisibility(kosong ? View.VISIBLE : View.GONE);
-        rvBarang.setVisibility(kosong ? View.GONE : View.VISIBLE);
     }
 
     @Override
@@ -133,10 +187,16 @@ public class KasirActivity extends AppCompatActivity {
 
     private void hitungTotal() {
         totalBelanjaSekarang = 0;
+        int totalItem = 0;
         for (CartItem item : cartList) {
             totalBelanjaSekarang += item.getSubtotal();
+            totalItem += item.getQuantity();
         }
         tvTotalTagihan.setText("Total: " + CurrencyFormatter.formatRupiah(totalBelanjaSekarang));
+        if (tvKeranjangBadge != null) {
+            tvKeranjangBadge.setVisibility(totalItem > 0 ? View.VISIBLE : View.GONE);
+            tvKeranjangBadge.setText(String.valueOf(totalItem));
+        }
     }
 
     private void tampilkanDetailBottomSheet(Barang barang) {
@@ -176,8 +236,12 @@ public class KasirActivity extends AppCompatActivity {
         });
 
         btnPlus.setOnClickListener(v -> {
-            qtyAwal[0]++;
-            tvQty.setText(String.valueOf(qtyAwal[0]));
+            if (qtyAwal[0] < barang.getStok()) {
+                qtyAwal[0]++;
+                tvQty.setText(String.valueOf(qtyAwal[0]));
+            } else {
+                Toast.makeText(this, "Stok hanya " + barang.getStok() + " pcs", Toast.LENGTH_SHORT).show();
+            }
         });
 
         btnMasukkanTas.setOnClickListener(v -> {
@@ -225,12 +289,11 @@ public class KasirActivity extends AppCompatActivity {
         return detail.toString();
     }
 
-    // Tangkap sinyal ketika pembayaran berhasil di PaymentActivity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 100 && resultCode == RESULT_OK) {
-            resetKeranjang(); // Bersihkan keranjang
+            resetKeranjang();
         }
     }
 
@@ -240,8 +303,6 @@ public class KasirActivity extends AppCompatActivity {
         hitungTotal();
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
     }
-
-    // --- MENU HIDEBAR & LOGOUT ---
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -264,12 +325,8 @@ public class KasirActivity extends AppCompatActivity {
 
     private void prosesLogout() {
         SharedPreferences sharedPreferences = getSharedPreferences("ButikSession", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.clear();
-        editor.apply();
-
+        sharedPreferences.edit().clear().apply();
         Toast.makeText(this, "Berhasil Logout", Toast.LENGTH_SHORT).show();
-
         Intent intent = new Intent(KasirActivity.this, MainActivity.class);
         startActivity(intent);
         finish();
