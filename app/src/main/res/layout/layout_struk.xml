@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/rounded_bottom_sheet"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingBottom="28dp"
+    android:paddingTop="8dp">
+
+    <!-- Drag handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        android:background="@color/dividerColor" />
+
+    <!-- Success banner -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_circle"
+            android:backgroundTint="#4CAF50"
+            android:gravity="center"
+            android:text="✓"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="Pembayaran Berhasil!"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Scrollable receipt content -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="16dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/strukCardContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/dividerColor"
+            app:strokeWidth="1dp">
+
+            <include
+                layout="@layout/layout_struk_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </com.google.android.material.card.MaterialCardView>
+    </ScrollView>
+
+    <!-- WhatsApp direct share -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/strukBtnWhatsapp"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginBottom="10dp"
+        android:text="Kirim via WhatsApp"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:backgroundTint="#25D366"
+        app:cornerRadius="26dp"
+        app:icon="@drawable/ic_whatsapp"
+        app:iconTint="#FFFFFF"
+        app:iconGravity="textStart"
+        app:iconPadding="8dp" />
+
+    <!-- Action buttons: Share | Simpan PDF -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="10dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/strukBtnShare"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Bagikan"
+            android:textSize="14sp"
+            app:strokeColor="@color/colorPrimary"
+            app:icon="@android:drawable/ic_menu_share"
+            app:iconTint="@color/colorPrimary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/strukBtnCetak"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Simpan PDF"
+            android:textColor="@color/colorOnPrimary"
+            android:textSize="13sp"
+            app:backgroundTint="@color/colorPrimary"
+            app:cornerRadius="24dp"
+            app:icon="@drawable/ic_download"
+            app:iconTint="@color/colorOnPrimary" />
+
+    </LinearLayout>
+
+    <!-- Print button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/strukBtnPrint"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginBottom="10dp"
+        android:text="Cetak Struk"
+        android:textColor="@color/colorPrimary"
+        android:textSize="14sp"
+        app:cornerRadius="24dp"
+        app:icon="@drawable/ic_print"
+        app:iconTint="@color/colorPrimary"
+        app:strokeColor="@color/colorPrimary" />
+
+    <!-- Done button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/strukBtnTutup"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="Transaksi Selesai"
+        android:textColor="@color/colorOnPrimary"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/colorPrimary"
+        app:cornerRadius="26dp" />
+
+</LinearLayout>
