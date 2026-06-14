@@ -6,6 +6,8 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -57,13 +59,15 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         Cursor c = dbHelper.getAllBarang();
         if (c != null && c.moveToFirst()) {
             do {
+                String kategori = c.getString(c.getColumnIndexOrThrow("kategori"));
                 listBarang.add(new BarangItem(
                         c.getInt(c.getColumnIndexOrThrow("id_barang")),
                         c.getString(c.getColumnIndexOrThrow("nama_barang")),
                         c.getDouble(c.getColumnIndexOrThrow("harga")),
                         c.getInt(c.getColumnIndexOrThrow("stok")),
                         c.getString(c.getColumnIndexOrThrow("detail_barang")),
-                        c.getString(c.getColumnIndexOrThrow("ukuran"))
+                        c.getString(c.getColumnIndexOrThrow("ukuran")),
+                        kategori != null ? kategori : "Lainnya"
                 ));
             } while (c.moveToNext());
             c.close();
@@ -74,13 +78,20 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         emptyView.setVisibility(listBarang.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
+    private static final String[] DAFTAR_KATEGORI = {"Atasan", "Bawahan", "Dress", "Outer", "Aksesoris", "Lainnya"};
+
     private void showFormDialog(BarangItem existing) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_form_barang, null);
-        EditText etNama   = view.findViewById(R.id.etNamaBarangForm);
-        EditText etHarga  = view.findViewById(R.id.etHargaBarangForm);
-        EditText etStok   = view.findViewById(R.id.etStokBarangForm);
-        EditText etDetail = view.findViewById(R.id.etDetailBarangForm);
-        EditText etUkuran = view.findViewById(R.id.etUkuranBarangForm);
+        EditText etNama              = view.findViewById(R.id.etNamaBarangForm);
+        EditText etHarga             = view.findViewById(R.id.etHargaBarangForm);
+        EditText etStok              = view.findViewById(R.id.etStokBarangForm);
+        EditText etDetail            = view.findViewById(R.id.etDetailBarangForm);
+        EditText etUkuran            = view.findViewById(R.id.etUkuranBarangForm);
+        AutoCompleteTextView actvKat = view.findViewById(R.id.actvKategoriForm);
+
+        ArrayAdapter<String> katAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, DAFTAR_KATEGORI);
+        actvKat.setAdapter(katAdapter);
 
         if (existing != null) {
             etNama.setText(existing.nama);
@@ -88,6 +99,9 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             etStok.setText(String.valueOf(existing.stok));
             etDetail.setText(existing.detail);
             etUkuran.setText(existing.ukuran);
+            actvKat.setText(existing.kategori, false);
+        } else {
+            actvKat.setText("Lainnya", false);
         }
 
         AlertDialog dialog = new AlertDialog.Builder(this)
@@ -103,22 +117,24 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             String stokStr  = etStok.getText().toString().trim();
             String detail   = etDetail.getText().toString().trim();
             String ukuran   = etUkuran.getText().toString().trim();
+            String kategori = actvKat.getText().toString().trim();
 
             if (TextUtils.isEmpty(nama) || TextUtils.isEmpty(hargaStr) || TextUtils.isEmpty(stokStr)) {
                 Toast.makeText(this, "Nama, harga, dan stok wajib diisi", Toast.LENGTH_SHORT).show();
                 return;
             }
             if (TextUtils.isEmpty(ukuran)) ukuran = "S,M,L,XL";
+            if (TextUtils.isEmpty(kategori)) kategori = "Lainnya";
 
             double harga = Double.parseDouble(hargaStr);
             int stok = Integer.parseInt(stokStr);
             boolean ok;
 
             if (existing == null) {
-                ok = dbHelper.insertBarang(nama, harga, stok, detail, ukuran);
+                ok = dbHelper.insertBarang(nama, harga, stok, detail, ukuran, kategori);
                 if (ok) Toast.makeText(this, "Barang berhasil ditambahkan", Toast.LENGTH_SHORT).show();
             } else {
-                ok = dbHelper.updateBarang(existing.id, nama, harga, stok, detail, ukuran);
+                ok = dbHelper.updateBarang(existing.id, nama, harga, stok, detail, ukuran, kategori);
                 if (ok) Toast.makeText(this, "Barang berhasil diperbarui", Toast.LENGTH_SHORT).show();
             }
 
@@ -151,17 +167,18 @@ public class ManajemenBarangActivity extends AppCompatActivity {
 
     static class BarangItem {
         int id;
-        String nama, detail, ukuran;
+        String nama, detail, ukuran, kategori;
         double harga;
         int stok;
 
-        BarangItem(int id, String nama, double harga, int stok, String detail, String ukuran) {
-            this.id     = id;
-            this.nama   = nama;
-            this.harga  = harga;
-            this.stok   = stok;
-            this.detail = detail != null ? detail : "";
-            this.ukuran = ukuran != null ? ukuran : "S,M,L,XL";
+        BarangItem(int id, String nama, double harga, int stok, String detail, String ukuran, String kategori) {
+            this.id       = id;
+            this.nama     = nama;
+            this.harga    = harga;
+            this.stok     = stok;
+            this.detail   = detail != null ? detail : "";
+            this.ukuran   = ukuran != null ? ukuran : "S,M,L,XL";
+            this.kategori = kategori != null ? kategori : "Lainnya";
         }
     }
 

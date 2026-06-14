@@ -77,7 +77,7 @@
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="12dp"
         android:hint="Ukuran (pisahkan koma, cth: S,M,L,XL)"
         app:boxStrokeColor="@color/colorPrimary"
         app:hintTextColor="@color/colorPrimary">
@@ -87,6 +87,24 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:hint="Kategori"
+        app:boxStrokeColor="@color/colorPrimary"
+        app:hintTextColor="@color/colorPrimary">
+
+        <AutoCompleteTextView
+            android:id="@+id/actvKategoriForm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none"
+            android:focusable="false"
+            android:focusableInTouchMode="false" />
     </com.google.android.material.textfield.TextInputLayout>
 
 </LinearLayout>

@@ -17,6 +17,8 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -41,6 +43,8 @@ import java.util.List;
 
 public class KasirActivity extends AppCompatActivity {
 
+    private static final String KATEGORI_SEMUA = "Semua";
+
     private RecyclerView rvBarang, rvKeranjang;
     private TextView tvTotalTagihan, tvEmptyKatalog, tvKeranjangBadge;
     private TextInputEditText etCariBarang;
@@ -53,6 +57,7 @@ public class KasirActivity extends AppCompatActivity {
     private BarangAdapter barangAdapter;
     private KeranjangAdapter keranjangAdapter;
     private double totalBelanjaSekarang = 0.0;
+    private String kategoriAktif = KATEGORI_SEMUA;
 
     private BottomSheetBehavior<View> bottomSheetBehavior;
 
@@ -79,6 +84,7 @@ public class KasirActivity extends AppCompatActivity {
 
         setupKeranjang();
         setupSearch();
+        setupKategoriChips();
         setupSwipeDelete();
         loadKatalogDariDB();
 
@@ -106,6 +112,24 @@ public class KasirActivity extends AppCompatActivity {
         });
     }
 
+    private void setupKategoriChips() {
+        ChipGroup chipGroup = findViewById(R.id.chipGroupKategori);
+        String[] daftarKategori = {KATEGORI_SEMUA, "Atasan", "Bawahan", "Dress", "Outer", "Aksesoris", "Lainnya"};
+        for (String kat : daftarKategori) {
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.chip_kategori, chipGroup, false);
+            chip.setText(kat);
+            chip.setChecked(kat.equals(KATEGORI_SEMUA));
+            chip.setOnCheckedChangeListener((btn, isChecked) -> {
+                if (isChecked) {
+                    kategoriAktif = kat;
+                    String q = etCariBarang.getText() != null ? etCariBarang.getText().toString().trim() : "";
+                    applyFilter(q);
+                }
+            });
+            chipGroup.addView(chip);
+        }
+    }
+
     private void setupSwipeDelete() {
         ItemTouchHelper.SimpleCallback swipeCallback = new ItemTouchHelper.SimpleCallback(
                 0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
@@ -128,13 +152,11 @@ public class KasirActivity extends AppCompatActivity {
 
     private void applyFilter(String query) {
         katalogList.clear();
-        if (query.isEmpty()) {
-            katalogList.addAll(katalogListFull);
-        } else {
-            String q = query.toLowerCase();
-            for (Barang b : katalogListFull) {
-                if (b.getNamaBarang().toLowerCase().contains(q)) katalogList.add(b);
-            }
+        String q = query.toLowerCase();
+        for (Barang b : katalogListFull) {
+            boolean matchSearch = query.isEmpty() || b.getNamaBarang().toLowerCase().contains(q);
+            boolean matchKat = KATEGORI_SEMUA.equals(kategoriAktif) || kategoriAktif.equals(b.getKategori());
+            if (matchSearch && matchKat) katalogList.add(b);
         }
         if (barangAdapter != null) barangAdapter.notifyDataSetChanged();
         boolean kosong = katalogList.isEmpty();
@@ -153,11 +175,13 @@ public class KasirActivity extends AppCompatActivity {
                 int stok       = c.getInt(c.getColumnIndexOrThrow("stok"));
                 String detail  = c.getString(c.getColumnIndexOrThrow("detail_barang"));
                 String ukuranStr = c.getString(c.getColumnIndexOrThrow("ukuran"));
+                String kategori  = c.getString(c.getColumnIndexOrThrow("kategori"));
                 if (detail == null) detail = "";
                 if (ukuranStr == null || ukuranStr.isEmpty()) ukuranStr = "S,M,L,XL";
+                if (kategori == null || kategori.isEmpty()) kategori = "Lainnya";
                 String[] ukuran = ukuranStr.split(",");
                 for (int i = 0; i < ukuran.length; i++) ukuran[i] = ukuran[i].trim();
-                katalogListFull.add(new Barang(id, nama, detail, harga, R.mipmap.ic_launcher, ukuran, stok));
+                katalogListFull.add(new Barang(id, nama, detail, harga, R.mipmap.ic_launcher, ukuran, stok, kategori));
             } while (c.moveToNext());
             c.close();
         }
