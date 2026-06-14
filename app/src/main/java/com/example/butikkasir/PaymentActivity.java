@@ -155,7 +155,8 @@ public class PaymentActivity extends AppCompatActivity {
                         Toast.LENGTH_SHORT).show();
                 } else {
                     double kembalian = bayar - totalBelanja;
-                    long transId = dbHelper.insertTransaksiDanKurangiStok(totalBelanja, "Tunai", detailTransaksi, cartItems);
+                    String kasirName0 = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
+                long transId = dbHelper.insertTransaksiDanKurangiStok(totalBelanja, "Tunai", detailTransaksi, kasirName0, cartItems);
                     tampilkanStruk(transId, "Tunai", bayar, kembalian);
                 }
             })
@@ -169,7 +170,8 @@ public class PaymentActivity extends AppCompatActivity {
             .setMessage("Silakan gesek/masukkan kartu pada mesin EDC sejumlah\n"
                 + CurrencyFormatter.formatRupiah(totalBelanja))
             .setPositiveButton("Transaksi Berhasil", (d, w) -> {
-                long transId = dbHelper.insertTransaksiDanKurangiStok(totalBelanja, "Debit/Kredit", detailTransaksi, cartItems);
+                String kasirName1 = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
+                long transId = dbHelper.insertTransaksiDanKurangiStok(totalBelanja, "Debit/Kredit", detailTransaksi, kasirName1, cartItems);
                 tampilkanStruk(transId, "Debit/Kredit", 0, 0);
             })
             .setNegativeButton("Batal", null)

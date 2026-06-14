@@ -96,7 +96,8 @@ public class QrisActivity extends AppCompatActivity {
         findViewById(R.id.qrisBtnKonfirmasi).setOnClickListener(v -> {
             countDownTimer.cancel();
             String metode = "QRIS (" + eWalletName + ")";
-            long transId = dbHelper.insertTransaksiDanKurangiStok(totalBelanja, metode, detailTransaksi, cartItems);
+            String kasirQ = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
+            long transId = dbHelper.insertTransaksiDanKurangiStok(totalBelanja, metode, detailTransaksi, kasirQ, cartItems);
             tampilkanStruk(transId, metode);
         });
     }

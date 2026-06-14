@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "ButikDB";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 5;
 
     // Table Barang
     private static final String TABLE_BARANG = "barang";
@@ -28,6 +28,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String KEY_TOTAL = "total_belanja";
     private static final String KEY_METODE = "metode_pembayaran";
     private static final String KEY_DETAIL = "detail_barang";
+    private static final String KEY_KASIR_TRX = "nama_kasir";
 
     // Table Kasir
     private static final String TABLE_KASIR = "kasir";
@@ -63,7 +64,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + KEY_TANGGAL + " DATETIME DEFAULT CURRENT_TIMESTAMP,"
                 + KEY_TOTAL + " REAL,"
                 + KEY_METODE + " TEXT,"
-                + KEY_DETAIL + " TEXT" + ")");
+                + KEY_DETAIL + " TEXT,"
+                + KEY_KASIR_TRX + " TEXT DEFAULT 'Kasir'" + ")");
 
         db.execSQL(CREATE_TABLE_KASIR);
         db.execSQL("INSERT INTO " + TABLE_KASIR + " (username, password, nama_kasir) VALUES ('kasir', '12345', 'Kasir')");
@@ -82,6 +84,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 4) {
             db.execSQL("ALTER TABLE " + TABLE_BARANG + " ADD COLUMN " + KEY_KATEGORI + " TEXT DEFAULT 'Lainnya'");
+        }
+        if (oldVersion < 5) {
+            db.execSQL("ALTER TABLE " + TABLE_TRANSAKSI + " ADD COLUMN " + KEY_KASIR_TRX + " TEXT DEFAULT 'Kasir'");
         }
     }
 
@@ -177,9 +182,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // --- FITUR KASIR & LAPORAN ---
 
-    public long insertTransaksiDanKurangiStok(double total, String metode, String detail,
+    public long insertTransaksiDanKurangiStok(double total, String metode, String detail, String kasir,
                                               java.util.List<com.example.butikkasir.model.CartItem> cartItems) {
-        long transId = insertTransaksi(total, metode, detail);
+        long transId = insertTransaksi(total, metode, detail, kasir);
         if (transId > 0 && cartItems != null) {
             for (com.example.butikkasir.model.CartItem item : cartItems) {
                 kurangiStok(item.getBarang().getId(), item.getQuantity());
@@ -188,12 +193,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return transId;
     }
 
-    public long insertTransaksi(double total, String metode, String detail) {
+    public long insertTransaksi(double total, String metode, String detail, String kasir) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(KEY_TOTAL, total);
         values.put(KEY_METODE, metode);
         values.put(KEY_DETAIL, detail);
+        values.put(KEY_KASIR_TRX, kasir != null ? kasir : "Kasir");
         return db.insert(TABLE_TRANSAKSI, null, values);
     }
 
@@ -231,19 +237,151 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Ringkasan pendapatan per metode pembayaran
     public Cursor getMetodeSummary(String from, String to) {
+        return getMetodeSummaryFiltered(from, to, null);
+    }
+
+    // ── Filtered queries (date + kasir, kategori filtered in-memory) ──
+
+    public Cursor getLaporanFiltered(String from, String to, String kasir) {
         SQLiteDatabase db = this.getReadableDatabase();
-        boolean hasFrom = from != null && !from.isEmpty();
-        boolean hasTo   = to   != null && !to.isEmpty();
-        String base = "SELECT " + KEY_METODE + ", COUNT(*) AS jml, SUM(" + KEY_TOTAL + ") AS total FROM " + TABLE_TRANSAKSI;
-        String group = " GROUP BY " + KEY_METODE;
-        if (!hasFrom && !hasTo) {
-            return db.rawQuery(base + group, null);
-        } else if (hasFrom && hasTo) {
-            return db.rawQuery(base + " WHERE date(" + KEY_TANGGAL + ") BETWEEN ? AND ?" + group, new String[]{from, to});
+        boolean hasFrom  = from  != null && !from.isEmpty();
+        boolean hasTo    = to    != null && !to.isEmpty();
+        boolean hasKasir = kasir != null && !kasir.isEmpty() && !"Semua".equals(kasir);
+
+        StringBuilder sql = new StringBuilder("SELECT * FROM ").append(TABLE_TRANSAKSI);
+        java.util.List<String> args = new java.util.ArrayList<>();
+        boolean hasWhere = false;
+
+        if (hasFrom && hasTo) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") BETWEEN ? AND ?");
+            args.add(from); args.add(to); hasWhere = true;
         } else if (hasFrom) {
-            return db.rawQuery(base + " WHERE date(" + KEY_TANGGAL + ") >= ?" + group, new String[]{from});
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") >= ?");
+            args.add(from); hasWhere = true;
+        } else if (hasTo) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") <= ?");
+            args.add(to); hasWhere = true;
+        }
+
+        if (hasKasir) {
+            sql.append(hasWhere ? " AND " : " WHERE ").append(KEY_KASIR_TRX).append(" = ?");
+            args.add(kasir);
+        }
+
+        sql.append(" ORDER BY ").append(KEY_TANGGAL).append(" DESC");
+        return db.rawQuery(sql.toString(), args.toArray(new String[0]));
+    }
+
+    public Cursor getMetodeSummaryFiltered(String from, String to, String kasir) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        boolean hasFrom  = from  != null && !from.isEmpty();
+        boolean hasTo    = to    != null && !to.isEmpty();
+        boolean hasKasir = kasir != null && !kasir.isEmpty() && !"Semua".equals(kasir);
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT " + KEY_METODE + ", COUNT(*) AS jml, SUM(" + KEY_TOTAL + ") AS total FROM " + TABLE_TRANSAKSI);
+        java.util.List<String> args = new java.util.ArrayList<>();
+        boolean hasWhere = false;
+
+        if (hasFrom && hasTo) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") BETWEEN ? AND ?");
+            args.add(from); args.add(to); hasWhere = true;
+        } else if (hasFrom) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") >= ?");
+            args.add(from); hasWhere = true;
+        } else if (hasTo) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") <= ?");
+            args.add(to); hasWhere = true;
+        }
+
+        if (hasKasir) {
+            sql.append(hasWhere ? " AND " : " WHERE ").append(KEY_KASIR_TRX).append(" = ?");
+            args.add(kasir);
+        }
+
+        sql.append(" GROUP BY ").append(KEY_METODE);
+        return db.rawQuery(sql.toString(), args.toArray(new String[0]));
+    }
+
+    // Returns daily sales: date(tanggal), SUM(total_belanja)
+    public Cursor getSalesPerDay(String from, String to, String kasir) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        boolean hasFrom  = from  != null && !from.isEmpty();
+        boolean hasTo    = to    != null && !to.isEmpty();
+        boolean hasKasir = kasir != null && !kasir.isEmpty() && !"Semua".equals(kasir);
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT date(" + KEY_TANGGAL + ") AS day, SUM(" + KEY_TOTAL + ") AS total FROM " + TABLE_TRANSAKSI);
+        java.util.List<String> args = new java.util.ArrayList<>();
+        boolean hasWhere = false;
+
+        if (hasFrom && hasTo) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") BETWEEN ? AND ?");
+            args.add(from); args.add(to); hasWhere = true;
+        } else if (hasFrom) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") >= ?");
+            args.add(from); hasWhere = true;
+        } else if (hasTo) {
+            sql.append(" WHERE date(").append(KEY_TANGGAL).append(") <= ?");
+            args.add(to); hasWhere = true;
+        }
+
+        if (hasKasir) {
+            sql.append(hasWhere ? " AND " : " WHERE ").append(KEY_KASIR_TRX).append(" = ?");
+            args.add(kasir);
+        }
+
+        sql.append(" GROUP BY day ORDER BY day ASC LIMIT 30");
+        return db.rawQuery(sql.toString(), args.toArray(new String[0]));
+    }
+
+    // Returns distinct kasir names that appear in transaksi
+    public java.util.List<String> getDistinctKasirFromTransaksi() {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        list.add("Semua");
+        Cursor c = this.getReadableDatabase().rawQuery(
+            "SELECT DISTINCT " + KEY_KASIR_TRX + " FROM " + TABLE_TRANSAKSI + " ORDER BY " + KEY_KASIR_TRX, null);
+        if (c != null && c.moveToFirst()) {
+            do { list.add(c.getString(0)); } while (c.moveToNext());
+            c.close();
+        }
+        return list;
+    }
+
+    // Returns distinct kategori from barang
+    public java.util.List<String> getAllKategoriFromBarang() {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        list.add("Semua");
+        Cursor c = this.getReadableDatabase().rawQuery(
+            "SELECT DISTINCT " + KEY_KATEGORI + " FROM " + TABLE_BARANG + " ORDER BY " + KEY_KATEGORI, null);
+        if (c != null && c.moveToFirst()) {
+            do { list.add(c.getString(0)); } while (c.moveToNext());
+            c.close();
+        }
+        return list;
+    }
+
+    // Returns barang names that belong to a given kategori
+    public java.util.List<String> getBarangNamesByKategori(String kategori) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        Cursor c = this.getReadableDatabase().rawQuery(
+            "SELECT " + KEY_NAMA_BARANG + " FROM " + TABLE_BARANG + " WHERE " + KEY_KATEGORI + " = ?",
+            new String[]{kategori});
+        if (c != null && c.moveToFirst()) {
+            do { list.add(c.getString(0)); } while (c.moveToNext());
+            c.close();
+        }
+        return list;
+    }
+
+    // Returns all barang ordered by stok ASC (low stock first)
+    public Cursor getAllBarangForStok(String kategori) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        if (kategori == null || "Semua".equals(kategori)) {
+            return db.rawQuery("SELECT * FROM " + TABLE_BARANG + " ORDER BY " + KEY_STOK + " ASC, " + KEY_NAMA_BARANG + " ASC", null);
         } else {
-            return db.rawQuery(base + " WHERE date(" + KEY_TANGGAL + ") <= ?" + group, new String[]{to});
+            return db.rawQuery("SELECT * FROM " + TABLE_BARANG + " WHERE " + KEY_KATEGORI + " = ? ORDER BY " + KEY_STOK + " ASC, " + KEY_NAMA_BARANG + " ASC",
+                new String[]{kategori});
         }
     }
 }
