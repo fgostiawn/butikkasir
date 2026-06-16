@@ -324,6 +324,11 @@ public class PaymentActivity extends AppCompatActivity {
         ((TextView) root.findViewById(R.id.strukTvMetode)).setText(metode);
         ((TextView) root.findViewById(R.id.strukTvTotal)).setText(CurrencyFormatter.formatRupiah(totalAkhir));
 
+        if (pelanggan != null) {
+            root.findViewById(R.id.strukLayoutPelanggan).setVisibility(View.VISIBLE);
+            ((TextView) root.findViewById(R.id.strukTvPelanggan)).setText(pelanggan.getNama());
+        }
+
         if (metode.equals("Tunai")) {
             root.findViewById(R.id.strukLayoutBayar).setVisibility(View.VISIBLE);
             root.findViewById(R.id.strukLayoutKembalian).setVisibility(View.VISIBLE);
@@ -482,7 +487,11 @@ public class PaymentActivity extends AppCompatActivity {
         sb.append("*" + NAMA_TOKO + "*\n");
         sb.append("Struk #").append(transId).append("\n\n");
         sb.append("Tanggal : ").append(tanggal).append("\n");
-        sb.append("Kasir   : ").append(kasirName).append("\n\n");
+        sb.append("Kasir   : ").append(kasirName).append("\n");
+        if (pelanggan != null) {
+            sb.append("Pelanggan : ").append(pelanggan.getNama()).append("\n");
+        }
+        sb.append("\n");
         sb.append("*Item Belanja:*\n");
         for (CartItem item : cartItems) {
             sb.append("• ").append(item.getBarang().getNamaBarang())
@@ -543,6 +552,9 @@ public class PaymentActivity extends AppCompatActivity {
         sb.append("Tanggal       : ")
           .append(new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID")).format(new Date()))
           .append("\n");
+        if (pelanggan != null) {
+            sb.append("Pelanggan     : ").append(pelanggan.getNama()).append("\n");
+        }
         sb.append("─────────────────────────\n");
         for (CartItem item : cartItems) {
             sb.append(item.getBarang().getNamaBarang())

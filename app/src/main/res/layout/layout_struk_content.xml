@@ -86,7 +86,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="14dp">
+        android:layout_marginBottom="5dp">
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -96,6 +96,28 @@
             android:textSize="12sp" />
         <TextView
             android:id="@+id/strukTvKasir"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#212121"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/strukLayoutPelanggan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="14dp"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Pelanggan"
+            android:textColor="#757575"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/strukTvPelanggan"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#212121"
