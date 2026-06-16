@@ -23,11 +23,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
         TextView tvGreeting = findViewById(R.id.tvGreeting);
         tvGreeting.setText("Halo, " + namaAdmin + "!");
 
-        MaterialCardView cardLaporan  = findViewById(R.id.cardLaporan);
-        MaterialCardView cardRekap    = findViewById(R.id.cardRekap);
-        MaterialCardView cardStok     = findViewById(R.id.cardStok);
-        MaterialCardView cardBarang   = findViewById(R.id.cardBarang);
-        MaterialCardView cardKasir    = findViewById(R.id.cardKasir);
+        MaterialCardView cardLaporan   = findViewById(R.id.cardLaporan);
+        MaterialCardView cardRekap     = findViewById(R.id.cardRekap);
+        MaterialCardView cardStok      = findViewById(R.id.cardStok);
+        MaterialCardView cardBarang    = findViewById(R.id.cardBarang);
+        MaterialCardView cardPelanggan = findViewById(R.id.cardPelanggan);
+        MaterialCardView cardKasir     = findViewById(R.id.cardKasir);
 
         cardLaporan.setOnClickListener(v ->
                 startActivity(new Intent(this, LaporanActivity.class)));
@@ -37,6 +38,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 startActivity(new Intent(this, LaporanStokActivity.class)));
         cardBarang.setOnClickListener(v ->
                 startActivity(new Intent(this, ManajemenBarangActivity.class)));
+        cardPelanggan.setOnClickListener(v ->
+                startActivity(new Intent(this, ManajemenPelangganActivity.class)));
         cardKasir.setOnClickListener(v ->
                 startActivity(new Intent(this, ManajemenKasirActivity.class)));
 
