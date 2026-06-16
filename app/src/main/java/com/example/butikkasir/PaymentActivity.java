@@ -30,6 +30,8 @@ import com.example.butikkasir.utils.PrintUtils;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
@@ -232,18 +234,112 @@ public class PaymentActivity extends AppCompatActivity {
     }
 
     private void dialogDebit() {
-        new AlertDialog.Builder(this)
-            .setTitle("Kartu Debit / Kredit")
-            .setMessage("Silakan gesek/masukkan kartu pada mesin EDC sejumlah\n"
-                + CurrencyFormatter.formatRupiah(totalAkhir))
-            .setPositiveButton("Transaksi Berhasil", (d, w) -> {
-                String kasirName1 = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
-                long transId = dbHelper.insertTransaksiDanKurangiStok(totalAkhir, "Debit/Kredit", detailTransaksi, kasirName1, cartItems);
-                updatePoinPelanggan();
-                tampilkanStruk(transId, "Debit/Kredit", 0, 0);
-            })
-            .setNegativeButton("Batal", null)
-            .show();
+        View view = getLayoutInflater().inflate(R.layout.dialog_form_kartu, null);
+
+        ((TextView) view.findViewById(R.id.tvTotalKartu))
+                .setText(CurrencyFormatter.formatRupiah(totalAkhir));
+
+        // Setup chip jenis kartu
+        ChipGroup chipGroup = view.findViewById(R.id.chipGroupJenisKartu);
+        String[] jenisKartu = {"Visa", "Mastercard", "GPN", "BCA", "Mandiri", "BRI", "BNI", "Lainnya"};
+        for (int i = 0; i < jenisKartu.length; i++) {
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.chip_kategori, chipGroup, false);
+            chip.setText(jenisKartu[i]);
+            chip.setChecked(i == 0);
+            chipGroup.addView(chip);
+        }
+
+        // Format nomor kartu: XXXX XXXX XXXX XXXX
+        TextInputEditText etNomor = view.findViewById(R.id.etNomorKartu);
+        etNomor.addTextChangedListener(new TextWatcher() {
+            private String current = "";
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s.toString().equals(current)) return;
+                etNomor.removeTextChangedListener(this);
+                String clean = s.toString().replaceAll("\\s", "");
+                StringBuilder formatted = new StringBuilder();
+                for (int i = 0; i < clean.length() && i < 16; i++) {
+                    if (i > 0 && i % 4 == 0) formatted.append(" ");
+                    formatted.append(clean.charAt(i));
+                }
+                current = formatted.toString();
+                etNomor.setText(current);
+                etNomor.setSelection(current.length());
+                etNomor.addTextChangedListener(this);
+            }
+        });
+
+        // Format masa berlaku: MM/YY
+        TextInputEditText etExpiry = view.findViewById(R.id.etMasaBerlaku);
+        etExpiry.addTextChangedListener(new TextWatcher() {
+            private String current = "";
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s.toString().equals(current)) return;
+                etExpiry.removeTextChangedListener(this);
+                String clean = s.toString().replaceAll("[^\\d]", "");
+                if (clean.length() >= 2) {
+                    current = clean.substring(0, 2) + "/" + clean.substring(2, Math.min(clean.length(), 4));
+                } else {
+                    current = clean;
+                }
+                etExpiry.setText(current);
+                etExpiry.setSelection(current.length());
+                etExpiry.addTextChangedListener(this);
+            }
+        });
+
+        TextInputEditText etNama = view.findViewById(R.id.etNamaPemegang);
+        TextInputEditText etCvv  = view.findViewById(R.id.etCvv);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Pembayaran Kartu Debit / Kredit")
+                .setView(view)
+                .setPositiveButton("Bayar", null)
+                .setNegativeButton("Batal", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String nomorBersih  = etNomor.getText() != null ? etNomor.getText().toString().replaceAll("\\s", "") : "";
+            String namaPemegang = etNama.getText() != null ? etNama.getText().toString().trim() : "";
+            String expiry       = etExpiry.getText() != null ? etExpiry.getText().toString().trim() : "";
+            String cvv          = etCvv.getText() != null ? etCvv.getText().toString().trim() : "";
+
+            int checkedId = chipGroup.getCheckedChipId();
+            Chip checkedChip = checkedId != View.NO_ID ? view.findViewById(checkedId) : null;
+            String jenisKartuPilihan = checkedChip != null ? checkedChip.getText().toString() : "Kartu";
+
+            if (nomorBersih.length() < 16) {
+                Toast.makeText(this, "Nomor kartu harus 16 digit", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (namaPemegang.isEmpty()) {
+                Toast.makeText(this, "Masukkan nama pemegang kartu", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!expiry.matches("\\d{2}/\\d{2}")) {
+                Toast.makeText(this, "Format masa berlaku: MM/YY", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (cvv.length() < 3) {
+                Toast.makeText(this, "CVV minimal 3 digit", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String metode = "Debit/Kredit - " + jenisKartuPilihan;
+            String kasirName = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
+            long transId = dbHelper.insertTransaksiDanKurangiStok(totalAkhir, metode, detailTransaksi, kasirName, cartItems);
+            updatePoinPelanggan();
+            dialog.dismiss();
+            tampilkanStruk(transId, metode, 0, 0);
+        }));
+
+        dialog.show();
     }
 
     private void dialogPilihEWallet() {
