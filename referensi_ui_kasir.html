@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Referensi UI/UX — Halaman Kasir Butik</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #B07850;
+    --primary-light: #C4956A;
+    --primary-dark: #8A5E38;
+    --accent: #2C2420;
+    --bg: #FAF7F4;
+    --surface: #FFFFFF;
+    --surface-2: #F5F0EB;
+    --border: #E8DDD4;
+    --text-1: #2C2420;
+    --text-2: #7A6A60;
+    --text-3: #A89888;
+    --success: #4A9C6D;
+    --warning: #D4842A;
+    --error: #C4464A;
+    --info: #3A7CBF;
+    --cart-bg: #FFF9F5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #EDE8E2;
+    min-height: 100vh;
+    color: var(--text-1);
+  }
+
+  /* ===== LAYOUT WRAPPER ===== */
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.28), 0 0 0 12px #1A1410, 0 0 0 14px #3A3028;
+  }
+
+  .layout-wrapper {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .screen-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .screen-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    color: #6A5A50;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .info-panel {
+    flex: 1;
+    min-width: 340px;
+  }
+
+  /* ===== SHARED SCREEN STYLES ===== */
+  .screen {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.28), 0 0 0 12px #1A1410, 0 0 0 14px #3A3028;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .status-bar {
+    height: 48px;
+    background: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    flex-shrink: 0;
+  }
+
+  .status-bar span { color: white; font-size: 13px; font-weight: 500; }
+
+  /* ===== SCREEN 1: KASIR ===== */
+  .toolbar {
+    background: var(--primary-dark);
+    padding: 12px 16px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .toolbar-content { flex: 1 }
+  .toolbar-title {
+    font-family: 'Playfair Display', serif;
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .toolbar-subtitle { color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 1px; }
+
+  .toolbar-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer; border: none;
+    transition: background 0.2s;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* Search bar */
+  .search-wrap {
+    padding: 12px 14px 8px;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .search-bar input {
+    border: none; outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; color: var(--text-1);
+    background: transparent; flex: 1;
+  }
+  .search-icon { color: var(--text-3); font-size: 15px; }
+  .scan-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 9px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+
+  /* Category chips */
+  .cats-wrap {
+    padding: 8px 14px 10px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .cats-wrap::-webkit-scrollbar { display: none; }
+  .cat-chip {
+    white-space: nowrap;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-2);
+    transition: all 0.2s;
+  }
+  .cat-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  /* Product grid */
+  .product-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 14px 0;
+    scrollbar-width: none;
+  }
+  .product-scroll::-webkit-scrollbar { display: none; }
+
+  .product-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-bottom: 200px;
+  }
+
+  .prod-card {
+    background: var(--surface);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .prod-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(176,120,80,0.15); }
+
+  .prod-img {
+    width: 100%;
+    aspect-ratio: 3/3.5;
+    background: linear-gradient(145deg, #F0E8E0, #E8D8C8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    position: relative;
+  }
+
+  .badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .badge-new { background: #2C2420; color: white; }
+  .badge-sale { background: var(--error); color: white; }
+  .badge-hot { background: var(--warning); color: white; }
+
+  .stock-low {
+    position: absolute;
+    bottom: 8px; right: 8px;
+    background: rgba(212,132,42,0.92);
+    color: white;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+
+  .prod-info {
+    padding: 10px 10px 10px;
+  }
+  .prod-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .prod-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+  .prod-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .prod-price {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .prod-add-btn {
+    width: 28px; height: 28px;
+    background: var(--primary);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  .prod-add-btn:hover { background: var(--primary-dark); }
+
+  .prod-stock {
+    font-size: 10.5px;
+    color: var(--text-3);
+    margin-top: 3px;
+  }
+
+  /* ===== FLOATING CART ===== */
+  .floating-cart {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--cart-bg);
+    border-top: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.08);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .cart-handle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+  }
+  .cart-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+  }
+  .cart-header-title {
+    font-size: 14px; font-weight: 600; color: var(--text-1);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cart-badge {
+    background: var(--primary);
+    color: white;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 8px;
+    min-width: 22px;
+    text-align: center;
+  }
+  .cart-clear-btn {
+    font-size: 12px;
+    color: var(--error);
+    background: none;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Cart items */
+  .cart-items-list {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 0 14px 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cart-item:last-child { border-bottom: none; }
+
+  .cart-item-thumb {
+    width: 42px; height: 42px;
+    background: linear-gradient(145deg, #F0E8E0, #E8D8C8);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .cart-item-info { flex: 1; }
+  .cart-item-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+  .cart-item-detail { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .cart-item-price { font-size: 12px; font-weight: 700; color: var(--primary); margin-top: 2px; }
+
+  .qty-stepper {
+    display: flex; align-items: center; gap: 0;
+    background: var(--surface-2);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .qty-btn {
+    width: 28px; height: 28px;
+    background: none; border: none;
+    font-size: 16px; font-weight: 700;
+    color: var(--primary); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .qty-num {
+    font-size: 13px; font-weight: 700; color: var(--text-1);
+    min-width: 22px; text-align: center;
+    padding: 0 2px;
+  }
+
+  /* Cart footer */
+  .cart-footer {
+    padding: 10px 14px 20px;
+  }
+  .cart-summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .cart-summary-label { font-size: 12.5px; color: var(--text-2); }
+  .cart-summary-val { font-size: 12.5px; color: var(--text-1); font-weight: 500; }
+
+  .divider-line {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  .cart-total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .cart-total-label { font-size: 15px; font-weight: 600; color: var(--text-1); }
+  .cart-total-val { font-size: 18px; font-weight: 700; color: var(--primary); }
+
+  .pay-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .pay-btn:hover { background: var(--primary-dark); }
+
+  /* ===== SCREEN 2: PAYMENT ===== */
+  .pay-screen { background: var(--bg); }
+  .pay-toolbar {
+    background: var(--primary-dark);
+    padding: 12px 16px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .back-btn {
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: white; cursor: pointer; border: none;
+  }
+  .pay-title {
+    font-family: 'Playfair Display', serif;
+    color: white; font-size: 17px; font-weight: 600;
+  }
+
+  .pay-scroll {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+  }
+  .pay-scroll::-webkit-scrollbar { display: none; }
+
+  .total-hero {
+    background: linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 100%);
+    padding: 28px 20px 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .total-hero::before {
+    content: '';
+    position: absolute;
+    width: 200px; height: 200px;
+    border: 40px solid rgba(255,255,255,0.05);
+    border-radius: 50%;
+    top: -60px; right: -40px;
+  }
+  .total-hero-label { color: rgba(255,255,255,0.75); font-size: 13px; letter-spacing: 0.06em; }
+  .total-hero-amount {
+    font-family: 'Playfair Display', serif;
+    color: white; font-size: 40px; font-weight: 700;
+    margin-top: 8px; letter-spacing: -0.01em;
+  }
+  .total-hero-items {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin-top: 16px;
+  }
+  .total-meta-pill {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    font-size: 12px; font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+  }
+
+  .pay-section {
+    padding: 16px 14px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: 600; color: var(--text-2);
+    letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .summary-item-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-item-row:last-child { border-bottom: none; }
+
+  .sum-thumb {
+    width: 36px; height: 36px;
+    background: linear-gradient(145deg, #F0E8E0, #E8D8C8);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .sum-info { flex: 1; }
+  .sum-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+  .sum-detail { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .sum-price { font-size: 13px; font-weight: 700; color: var(--text-1); }
+
+  .bill-rows {
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .bill-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px; color: var(--text-2);
+  }
+  .bill-row.total {
+    font-size: 15px; font-weight: 700; color: var(--text-1);
+    padding-top: 10px; margin-top: 4px;
+    border-top: 1px dashed var(--border);
+  }
+  .bill-row.discount { color: var(--success); }
+
+  /* Payment methods */
+  .pay-method-card {
+    background: var(--surface);
+    border-radius: 16px;
+    border: 2px solid var(--border);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pay-method-card:hover, .pay-method-card.selected {
+    border-color: var(--primary);
+    background: #FFF8F3;
+  }
+  .method-icon {
+    width: 46px; height: 46px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+    font-weight: 800; letter-spacing: -1px;
+    font-size: 13px;
+  }
+  .method-cash { background: #E8F5E9; color: var(--success); }
+  .method-qris { background: #E3F2FD; color: var(--info); }
+  .method-debit { background: #EDE7F6; color: #6B35C2; }
+
+  .method-info { flex: 1; }
+  .method-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
+  .method-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+  .method-radio {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .method-radio.checked { border-color: var(--primary); }
+  .method-radio.checked::after {
+    content: '';
+    width: 10px; height: 10px;
+    background: var(--primary);
+    border-radius: 50%;
+  }
+
+  /* Cash input */
+  .cash-input-card {
+    background: #FFF8F3;
+    border-radius: 16px;
+    border: 1.5px solid var(--primary-light);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .cash-input-label { font-size: 12.5px; color: var(--text-2); margin-bottom: 8px; font-weight: 500; }
+  .cash-input-field {
+    display: flex; align-items: center;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    gap: 8px; margin-bottom: 10px;
+  }
+  .cash-prefix { font-size: 15px; font-weight: 600; color: var(--text-2); }
+  .cash-amount { font-size: 22px; font-weight: 700; color: var(--text-1); flex: 1; }
+
+  .quick-amounts {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+  }
+  .quick-amt-btn {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 7px 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--primary); cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .quick-amt-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+  .kembalian-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #E8F5E9; border-radius: 12px; padding: 10px 14px; margin-top: 10px;
+  }
+  .kembalian-label { font-size: 13px; font-weight: 500; color: var(--success); }
+  .kembalian-val { font-size: 16px; font-weight: 700; color: var(--success); }
+
+  .confirm-btn {
+    width: 100%; padding: 15px;
+    background: var(--primary);
+    color: white; border: none;
+    border-radius: 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.03em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 4px;
+    transition: background 0.2s;
+  }
+  .confirm-btn:hover { background: var(--primary-dark); }
+
+  /* ===== SCREEN 3: STRUK ===== */
+  .receipt-screen { background: var(--bg); }
+
+  .receipt-hero {
+    background: linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 100%);
+    padding: 28px 20px 48px;
+    text-align: center;
+  }
+  .receipt-icon {
+    width: 72px; height: 72px;
+    background: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; margin: 0 auto 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  .receipt-title {
+    font-family: 'Playfair Display', serif;
+    color: white; font-size: 22px; font-weight: 700;
+  }
+  .receipt-subtitle { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 6px; }
+
+  .receipt-card {
+    background: var(--surface);
+    border-radius: 20px;
+    margin: -24px 14px 0;
+    padding: 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    position: relative;
+    z-index: 1;
+  }
+
+  .receipt-shop {
+    text-align: center;
+    padding-bottom: 14px;
+    border-bottom: 1.5px dashed var(--border);
+    margin-bottom: 14px;
+  }
+  .receipt-shop-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px; font-weight: 700; color: var(--text-1);
+  }
+  .receipt-shop-info { font-size: 11.5px; color: var(--text-3); margin-top: 3px; }
+
+  .receipt-meta {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px 16px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .receipt-meta-item { }
+  .receipt-meta-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+  .receipt-meta-val { font-size: 12.5px; font-weight: 600; color: var(--text-1); margin-top: 2px; }
+
+  .receipt-items {
+    padding-bottom: 14px;
+    border-bottom: 1.5px dashed var(--border);
+    margin-bottom: 12px;
+  }
+
+  .receipt-item-row {
+    display: flex; justify-content: space-between;
+    align-items: flex-start;
+    padding: 5px 0;
+    font-size: 12.5px;
+  }
+  .receipt-item-qty { color: var(--text-3); font-size: 11px; }
+  .receipt-item-name { color: var(--text-1); font-weight: 500; }
+  .receipt-item-price { color: var(--text-1); font-weight: 600; }
+
+  .receipt-totals { margin-bottom: 14px; }
+  .receipt-total-row {
+    display: flex; justify-content: space-between;
+    font-size: 12.5px; color: var(--text-2);
+    padding: 4px 0;
+  }
+  .receipt-total-row.grand { font-size: 15px; font-weight: 700; color: var(--text-1); padding-top: 8px; margin-top: 6px; border-top: 1px solid var(--border); }
+
+  .receipt-actions {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; padding: 14px;
+  }
+  .act-btn {
+    padding: 13px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .act-btn-outline {
+    background: var(--surface-2);
+    color: var(--text-1);
+    border: 1.5px solid var(--border);
+  }
+  .act-btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  /* ===== INFO PANEL ===== */
+  .info-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  .info-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; color: var(--primary-dark);
+    margin-bottom: 4px;
+  }
+  .info-card .sub { font-size: 13px; color: var(--text-2); margin-bottom: 18px; }
+
+  .feature-list { list-style: none; }
+  .feature-list li {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #F0EDE8;
+    font-size: 13.5px; color: var(--text-1);
+    line-height: 1.5;
+  }
+  .feature-list li:last-child { border-bottom: none; }
+  .feat-icon {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0; margin-top: -1px;
+  }
+  .fi-blue { background: #E3F2FD; }
+  .fi-green { background: #E8F5E9; }
+  .fi-orange { background: #FFF3E0; }
+  .fi-purple { background: #EDE7F6; }
+  .fi-red { background: #FFEBEE; }
+  .fi-teal { background: #E0F2F1; }
+
+  .feat-text strong { display: block; font-weight: 600; color: var(--text-1); }
+  .feat-text span { font-size: 12px; color: var(--text-2); }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+  }
+  .tag-exists { background: #E8F5E9; color: #2E7D52; }
+  .tag-new { background: #FFF3E0; color: #9E5500; }
+  .tag-pro { background: #EDE7F6; color: #5B35A0; }
+
+  /* Page title */
+  .page-hero {
+    text-align: center;
+    padding: 48px 40px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .page-hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px; color: #2C2420;
+    margin-bottom: 8px;
+  }
+  .page-hero p { font-size: 15px; color: #7A6A60; max-width: 560px; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<div class="page-hero">
+  <h1>Referensi UI/UX Halaman Kasir</h1>
+  <p>Mockup desain & panduan fitur untuk app <strong>Butik Kasir</strong> — 3 layar utama: Katalog, Pembayaran, Struk</p>
+</div>
+
+<div class="layout-wrapper">
+
+  <!-- ===== SCREEN 1: KASIR ===== -->
+  <div class="screen-column">
+    <div class="screen-label">Layar 1 — Katalog & Keranjang</div>
+    <div class="screen">
+      <!-- Status bar -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <span>📶 🔋</span>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-content">
+          <div class="toolbar-title">Butik Dea</div>
+          <div class="toolbar-subtitle">Kasir: Sari · Shift Pagi</div>
+        </div>
+        <div class="toolbar-actions">
+          <button class="icon-btn" title="Tahan Transaksi">🔖</button>
+          <button class="icon-btn" title="Riwayat Hari Ini">📋</button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Cari nama atau kode barang..." readonly>
+          <button class="scan-btn">📷 SCAN</button>
+        </div>
+      </div>
+
+      <!-- Category chips -->
+      <div class="cats-wrap">
+        <div class="cat-chip active">Semua</div>
+        <div class="cat-chip">Atasan</div>
+        <div class="cat-chip">Bawahan</div>
+        <div class="cat-chip">Dress</div>
+        <div class="cat-chip">Aksesoris</div>
+        <div class="cat-chip">Outer</div>
+      </div>
+
+      <!-- Products -->
+      <div class="product-scroll">
+        <div class="product-grid">
+
+          <div class="prod-card">
+            <div class="prod-img">
+              👗
+              <div class="badge badge-new">BARU</div>
+            </div>
+            <div class="prod-info">
+              <div class="prod-name">Blouse Linen</div>
+              <div class="prod-sub">S / M / L · Krem</div>
+              <div class="prod-footer">
+                <div>
+                  <div class="prod-price">Rp 185.000</div>
+                  <div class="prod-stock">Stok: 12</div>
+                </div>
+                <button class="prod-add-btn">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="prod-card">
+            <div class="prod-img">
+              👔
+              <div class="badge badge-sale">-20%</div>
+              <div class="stock-low">⚠ Stok 2</div>
+            </div>
+            <div class="prod-info">
+              <div class="prod-name">Kemeja Batik</div>
+              <div class="prod-sub">M / L / XL</div>
+              <div class="prod-footer">
+                <div>
+                  <div class="prod-price">Rp 120.000</div>
+                  <div class="prod-stock" style="color:#D4842A">Hampir habis!</div>
+                </div>
+                <button class="prod-add-btn">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="prod-card">
+            <div class="prod-img">
+              👗
+              <div class="badge badge-hot">🔥 LARIS</div>
+            </div>
+            <div class="prod-info">
+              <div class="prod-name">Dress Midi Floral</div>
+              <div class="prod-sub">S / M · Merah</div>
+              <div class="prod-footer">
+                <div>
+                  <div class="prod-price">Rp 245.000</div>
+                  <div class="prod-stock">Stok: 8</div>
+                </div>
+                <button class="prod-add-btn">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="prod-card">
+            <div class="prod-img">
+              🧥
+            </div>
+            <div class="prod-info">
+              <div class="prod-name">Cardigan Rajut</div>
+              <div class="prod-sub">All size · Abu</div>
+              <div class="prod-footer">
+                <div>
+                  <div class="prod-price">Rp 165.000</div>
+                  <div class="prod-stock">Stok: 5</div>
+                </div>
+                <button class="prod-add-btn">+</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Floating Cart -->
+      <div class="floating-cart">
+        <div class="cart-handle"></div>
+        <div class="cart-handle-row" style="padding-top:22px;">
+          <div class="cart-header-title">
+            🛍️ Keranjang
+            <span class="cart-badge">2</span>
+          </div>
+          <button class="cart-clear-btn">Hapus Semua</button>
+        </div>
+
+        <div class="cart-items-list">
+          <div class="cart-item">
+            <div class="cart-item-thumb">👗</div>
+            <div class="cart-item-info">
+              <div class="cart-item-name">Blouse Linen</div>
+              <div class="cart-item-detail">Size: M · Krem</div>
+              <div class="cart-item-price">Rp 185.000</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn">−</button>
+              <span class="qty-num">1</span>
+              <button class="qty-btn">+</button>
+            </div>
+          </div>
+          <div class="cart-item">
+            <div class="cart-item-thumb">👗</div>
+            <div class="cart-item-info">
+              <div class="cart-item-name">Dress Midi Floral</div>
+              <div class="cart-item-detail">Size: S · Merah</div>
+              <div class="cart-item-price">Rp 490.000</div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn">−</button>
+              <span class="qty-num">2</span>
+              <button class="qty-btn">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cart-footer">
+          <div class="cart-summary-row">
+            <span class="cart-summary-label">3 item</span>
+            <span class="cart-summary-val">Rp 675.000</span>
+          </div>
+          <div class="cart-summary-row">
+            <span class="cart-summary-label">Diskon (–10%)</span>
+            <span class="cart-summary-val" style="color:var(--success)">–Rp 67.500</span>
+          </div>
+          <div class="divider-line"></div>
+          <div class="cart-total-row">
+            <span class="cart-total-label">Total</span>
+            <span class="cart-total-val">Rp 607.500</span>
+          </div>
+          <button class="pay-btn">
+            Lanjut Pembayaran →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 2: PAYMENT ===== -->
+  <div class="screen-column">
+    <div class="screen-label">Layar 2 — Metode Pembayaran</div>
+    <div class="screen pay-screen">
+      <div class="status-bar">
+        <span>9:45</span>
+        <span>📶 🔋</span>
+      </div>
+
+      <div class="pay-toolbar">
+        <button class="back-btn">‹</button>
+        <div class="pay-title">Pembayaran</div>
+      </div>
+
+      <div class="pay-scroll">
+        <!-- Total hero -->
+        <div class="total-hero">
+          <div class="total-hero-label">TOTAL TAGIHAN</div>
+          <div class="total-hero-amount">Rp 607.500</div>
+          <div class="total-hero-items">
+            <div class="total-meta-pill">3 item</div>
+            <div class="total-meta-pill">Diskon –Rp 67.500</div>
+          </div>
+        </div>
+
+        <div class="pay-section">
+          <!-- Ringkasan -->
+          <div class="section-title">Ringkasan Pesanan</div>
+          <div class="summary-card">
+            <div class="summary-item-row">
+              <div class="sum-thumb">👗</div>
+              <div class="sum-info">
+                <div class="sum-name">Blouse Linen (M)</div>
+                <div class="sum-detail">1× Rp 185.000</div>
+              </div>
+              <div class="sum-price">Rp 185.000</div>
+            </div>
+            <div class="summary-item-row">
+              <div class="sum-thumb">👗</div>
+              <div class="sum-info">
+                <div class="sum-name">Dress Midi Floral (S)</div>
+                <div class="sum-detail">2× Rp 245.000</div>
+              </div>
+              <div class="sum-price">Rp 490.000</div>
+            </div>
+          </div>
+
+          <!-- Bill rows -->
+          <div class="bill-rows">
+            <div class="bill-row">
+              <span>Subtotal</span><span>Rp 675.000</span>
+            </div>
+            <div class="bill-row discount">
+              <span>🎟️ Diskon Promo (10%)</span><span>–Rp 67.500</span>
+            </div>
+            <div class="bill-row total">
+              <span>Total Bayar</span><span style="color:var(--primary)">Rp 607.500</span>
+            </div>
+          </div>
+
+          <!-- Methods -->
+          <div class="section-title">Metode Pembayaran</div>
+          <div class="pay-method-card selected">
+            <div class="method-icon method-cash">💵 Rp</div>
+            <div class="method-info">
+              <div class="method-name">Tunai (Cash)</div>
+              <div class="method-sub">Hitung kembalian otomatis</div>
+            </div>
+            <div class="method-radio checked"></div>
+          </div>
+          <div class="pay-method-card">
+            <div class="method-icon method-qris">📱 QR</div>
+            <div class="method-info">
+              <div class="method-name">QRIS / E-Wallet</div>
+              <div class="method-sub">GoPay · OVO · DANA · ShopeePay</div>
+            </div>
+            <div class="method-radio"></div>
+          </div>
+          <div class="pay-method-card">
+            <div class="method-icon method-debit">💳 DC</div>
+            <div class="method-info">
+              <div class="method-name">Kartu Debit / Kredit</div>
+              <div class="method-sub">Mesin EDC tersedia di kasir</div>
+            </div>
+            <div class="method-radio"></div>
+          </div>
+
+          <!-- Cash input -->
+          <div class="cash-input-card" style="margin-top:14px;">
+            <div class="cash-input-label">Uang yang diterima</div>
+            <div class="cash-input-field">
+              <span class="cash-prefix">Rp</span>
+              <span class="cash-amount">700.000</span>
+            </div>
+            <div class="quick-amounts">
+              <button class="quick-amt-btn">+50.000</button>
+              <button class="quick-amt-btn">+100.000</button>
+              <button class="quick-amt-btn">+200.000</button>
+              <button class="quick-amt-btn">650.000</button>
+              <button class="quick-amt-btn">700.000</button>
+              <button class="quick-amt-btn">Uang Pas</button>
+            </div>
+            <div class="kembalian-row">
+              <span class="kembalian-label">✅ Kembalian</span>
+              <span class="kembalian-val">Rp 92.500</span>
+            </div>
+          </div>
+
+          <!-- Confirm btn -->
+          <button class="confirm-btn">
+            ✅ Proses Pembayaran
+          </button>
+          <div style="height:24px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 3: STRUK ===== -->
+  <div class="screen-column">
+    <div class="screen-label">Layar 3 — Struk & Konfirmasi</div>
+    <div class="screen receipt-screen">
+      <div class="status-bar">
+        <span>9:47</span>
+        <span>📶 🔋</span>
+      </div>
+
+      <div class="pay-scroll">
+        <!-- Hero -->
+        <div class="receipt-hero">
+          <div class="receipt-icon">✅</div>
+          <div class="receipt-title">Pembayaran Berhasil!</div>
+          <div class="receipt-subtitle">14 Jun 2026 · 09:47 · No. T-2024061401</div>
+        </div>
+
+        <!-- Receipt card -->
+        <div class="receipt-card">
+          <div class="receipt-shop">
+            <div class="receipt-shop-name">✂️ Butik Dea</div>
+            <div class="receipt-shop-info">Jl. Pahlawan No. 12, Kota Bandung</div>
+            <div class="receipt-shop-info">Kasir: Sari · Shift Pagi</div>
+          </div>
+
+          <div class="receipt-meta">
+            <div class="receipt-meta-item">
+              <div class="receipt-meta-label">No. Struk</div>
+              <div class="receipt-meta-val">T-2406-001</div>
+            </div>
+            <div class="receipt-meta-item">
+              <div class="receipt-meta-label">Tanggal</div>
+              <div class="receipt-meta-val">14 Jun 2026</div>
+            </div>
+            <div class="receipt-meta-item">
+              <div class="receipt-meta-label">Jam</div>
+              <div class="receipt-meta-val">09:47 WIB</div>
+            </div>
+            <div class="receipt-meta-item">
+              <div class="receipt-meta-label">Metode Bayar</div>
+              <div class="receipt-meta-val">💵 Tunai</div>
+            </div>
+          </div>
+
+          <div class="receipt-items">
+            <div class="receipt-item-row">
+              <div>
+                <div class="receipt-item-name">Blouse Linen (M)</div>
+                <div class="receipt-item-qty">1× Rp 185.000</div>
+              </div>
+              <div class="receipt-item-price">Rp 185.000</div>
+            </div>
+            <div class="receipt-item-row">
+              <div>
+                <div class="receipt-item-name">Dress Midi Floral (S)</div>
+                <div class="receipt-item-qty">2× Rp 245.000</div>
+              </div>
+              <div class="receipt-item-price">Rp 490.000</div>
+            </div>
+          </div>
+
+          <div class="receipt-totals">
+            <div class="receipt-total-row">
+              <span>Subtotal</span><span>Rp 675.000</span>
+            </div>
+            <div class="receipt-total-row" style="color:var(--success)">
+              <span>Diskon 10%</span><span>–Rp 67.500</span>
+            </div>
+            <div class="receipt-total-row">
+              <span>Bayar</span><span>Rp 700.000</span>
+            </div>
+            <div class="receipt-total-row grand">
+              <span>Total</span><span style="color:var(--primary)">Rp 607.500</span>
+            </div>
+            <div class="receipt-total-row" style="color:var(--success);font-weight:600">
+              <span>Kembalian</span><span>Rp 92.500</span>
+            </div>
+          </div>
+
+          <div style="text-align:center; padding:10px 0; border-top:1px dashed var(--border);">
+            <div style="font-size:28px; letter-spacing:2px; margin-bottom:4px;">||||||||||||||||</div>
+            <div style="font-size:10px; color:var(--text-3); letter-spacing:0.1em;">T-2406-001</div>
+            <div style="font-size:11px; color:var(--text-3); margin-top:10px;">Terima kasih sudah berbelanja 🌸</div>
+            <div style="font-size:11px; color:var(--text-3);">Barang yang sudah dibeli tidak dapat ditukar</div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="receipt-actions">
+          <button class="act-btn act-btn-outline">📤 Kirim WA</button>
+          <button class="act-btn act-btn-outline">🖨️ Print Struk</button>
+          <button class="act-btn act-btn-primary" style="grid-column: span 2;">
+            🆕 Transaksi Baru
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== INFO PANEL ===== -->
+  <div class="info-panel">
+
+    <div class="info-card">
+      <h2>Fitur yang Sudah Ada</h2>
+      <p class="sub">Dari codebase project saat ini</p>
+      <div class="tag-row">
+        <span class="tag tag-exists">✓ Katalog barang</span>
+        <span class="tag tag-exists">✓ Cari barang</span>
+        <span class="tag tag-exists">✓ Keranjang (bottom sheet)</span>
+        <span class="tag tag-exists">✓ Qty stepper +/–</span>
+        <span class="tag tag-exists">✓ Swipe-to-delete keranjang</span>
+        <span class="tag tag-exists">✓ Info stok barang</span>
+        <span class="tag tag-exists">✓ Bayar tunai, QRIS, kartu debit</span>
+        <span class="tag tag-exists">✓ Cetak struk</span>
+        <span class="tag tag-exists">✓ Laporan transaksi</span>
+        <span class="tag tag-exists">✓ Admin: manajemen barang & kasir</span>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h2>Fitur Baru yang Disarankan</h2>
+      <p class="sub">Untuk meningkatkan UX kasir butik</p>
+      <ul class="feature-list">
+        <li>
+          <div class="feat-icon fi-blue">🏷️</div>
+          <div class="feat-text">
+            <strong>Filter Kategori (Chips)</strong>
+            <span>Atasan / Bawahan / Dress / Outer / Aksesoris — kasir cari barang lebih cepat tanpa scroll panjang</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-orange">⚠️</div>
+          <div class="feat-text">
+            <strong>Badge Stok Menipis</strong>
+            <span>Tampilkan peringatan visual di kartu produk jika stok ≤ 3, agar kasir bisa menginfokan ke pelanggan</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-green">🎟️</div>
+          <div class="feat-text">
+            <strong>Diskon / Promo</strong>
+            <span>Input diskon persen atau nominal — diskon per item maupun diskon total transaksi</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-blue">💵</div>
+          <div class="feat-text">
+            <strong>Tombol Nominal Cepat (Quick Cash)</strong>
+            <span>Tombol nominal populer (50rb, 100rb, 200rb, uang pas) agar kasir tidak perlu ketik manual</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-purple">🔖</div>
+          <div class="feat-text">
+            <strong>Tahan Transaksi (Hold Order)</strong>
+            <span>Simpan transaksi sementara jika pelanggan masih pilih-pilih, lanjutkan ke pelanggan berikutnya</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-orange">📷</div>
+          <div class="feat-text">
+            <strong>Scan Barcode / QR Produk</strong>
+            <span>Kamera HP scan barcode barang — langsung masuk ke keranjang tanpa perlu scroll katalog</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-teal">📤</div>
+          <div class="feat-text">
+            <strong>Kirim Struk via WhatsApp</strong>
+            <span>Setelah bayar, kasir bisa share struk digital ke WA pelanggan (Intent.ACTION_SEND)</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-blue">📊</div>
+          <div class="feat-text">
+            <strong>Ringkasan Shift Hari Ini</strong>
+            <span>Di toolbar: total transaksi & omzet hari ini — kasir tahu performa tanpa buka laporan</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-green">👤</div>
+          <div class="feat-text">
+            <strong>Nama Pelanggan (Opsional)</strong>
+            <span>Input nama pelanggan opsional — tercetak di struk, berguna untuk pickup order atau member</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-red">📝</div>
+          <div class="feat-text">
+            <strong>Catatan per Transaksi</strong>
+            <span>Kolom catatan bebas — misal "request packing kado", "COD titip di security", dll.</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="info-card">
+      <h2>Perbaikan Desain UI</h2>
+      <p class="sub">Yang terlihat di mockup vs kondisi sekarang</p>
+      <ul class="feature-list">
+        <li>
+          <div class="feat-icon fi-blue">📱</div>
+          <div class="feat-text">
+            <strong>Grid 2 Kolom untuk Katalog</strong>
+            <span>Saat ini: list 1 kolom. Grid 2 kolom lebih efisien untuk produk fashion dengan gambar</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-orange">🏷️</div>
+          <div class="feat-text">
+            <strong>Badge Produk (Baru / Laris / Diskon)</strong>
+            <span>Label kecil di pojok gambar — membantu kasir merekomendasikan ke pelanggan</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-green">📊</div>
+          <div class="feat-text">
+            <strong>Subtotal di Keranjang</strong>
+            <span>Tampilkan subtotal + baris diskon terpisah sebelum total — lebih transparan</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-purple">✅</div>
+          <div class="feat-text">
+            <strong>Layar Konfirmasi Pembayaran Berhasil</strong>
+            <span>Halaman sukses dengan animasi, detail struk, dan tombol "Transaksi Baru" yang prominent</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="info-card">
+      <h2>Prioritas Implementasi</h2>
+      <p class="sub">Dari yang paling berdampak</p>
+      <ul class="feature-list">
+        <li>
+          <div class="feat-icon fi-red" style="background:#FFEBEE;color:#C62828;font-weight:700;font-size:14px;">1</div>
+          <div class="feat-text">
+            <strong>Filter Kategori + Badge Stok Menipis</strong>
+            <span>Dampak besar, implementasi sederhana — chips + warna text stok</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-orange" style="background:#FFF3E0;color:#E65100;font-weight:700;font-size:14px;">2</div>
+          <div class="feat-text">
+            <strong>Diskon + Tombol Nominal Cepat</strong>
+            <span>Sering dibutuhkan kasir sehari-hari — hemat waktu signifikan</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-green" style="background:#E8F5E9;color:#1B5E20;font-weight:700;font-size:14px;">3</div>
+          <div class="feat-text">
+            <strong>Grid 2 Kolom + Badge Produk</strong>
+            <span>Perubahan visual yang meningkatkan tampilan secara keseluruhan</span>
+          </div>
+        </li>
+        <li>
+          <div class="feat-icon fi-blue" style="background:#E3F2FD;color:#0D47A1;font-weight:700;font-size:14px;">4</div>
+          <div class="feat-text">
+            <strong>Kirim Struk WA + Hold Order</strong>
+            <span>Fitur advanced — berguna tapi tidak mendesak untuk v1</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
