@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/backgroundColor"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbarStok"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/colorPrimary"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="Laporan Stok Barang"
+        app:titleTextColor="@color/colorOnPrimary" />
+
+    <!-- Filter kategori -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surfaceColor"
+        android:elevation="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kategori:"
+            android:textColor="@color/textColorSecondary"
+            android:textSize="13sp"
+            android:layout_marginEnd="8dp" />
+
+        <Spinner
+            android:id="@+id/spinnerKategoriStok"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <!-- Summary cards -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="4dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            app:cardBackgroundColor="@color/colorPrimaryContainer"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tvTotalSku"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 SKU"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Total Produk"
+                    android:textColor="@color/colorOnPrimaryContainer"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            app:cardBackgroundColor="#FFF3F3"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:strokeColor="#FFCDD2"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tvLowStok"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 item kritis"
+                    android:textColor="#C62828"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Stok ≤ 5"
+                    android:textColor="#E57373"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- Legend -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="6dp">
+
+        <View android:layout_width="8dp" android:layout_height="8dp"
+            android:background="#F44336" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text=" Habis" android:textSize="11sp" android:textColor="@color/textColorSecondary"
+            android:layout_marginEnd="10dp"/>
+        <View android:layout_width="8dp" android:layout_height="8dp"
+            android:background="#FF9800" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text=" Kritis (≤5)" android:textSize="11sp" android:textColor="@color/textColorSecondary"
+            android:layout_marginEnd="10dp"/>
+        <View android:layout_width="8dp" android:layout_height="8dp"
+            android:background="#4CAF50" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text=" Aman" android:textSize="11sp" android:textColor="@color/textColorSecondary"/>
+    </LinearLayout>
+
+    <!-- List stok -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:id="@+id/stokListLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp" />
+    </ScrollView>
+
+</LinearLayout>
