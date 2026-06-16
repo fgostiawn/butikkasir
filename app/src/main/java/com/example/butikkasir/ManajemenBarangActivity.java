@@ -1,6 +1,11 @@
 package com.example.butikkasir;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -11,12 +16,17 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -29,6 +39,11 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +56,16 @@ public class ManajemenBarangActivity extends AppCompatActivity {
 
     private String currentSearch = "";
     private String currentKategori = "Semua";
+
+    // Image picking state
+    private ImageView dialogImgPreview;
+    private TextView dialogTvHapusGambar;
+    private String pendingGambarPath = "";
+    private String tempCameraFilePath = null;
+
+    private ActivityResultLauncher<Uri> cameraLauncher;
+    private ActivityResultLauncher<String> galleryLauncher;
+    private ActivityResultLauncher<String> cameraPermLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,9 +85,48 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         FloatingActionButton fab = findViewById(R.id.fabTambahBarang);
         fab.setOnClickListener(v -> showFormDialog(null));
 
+        setupImageLaunchers();
         setupSearch();
         setupCategoryChips();
         loadData();
+    }
+
+    private void setupImageLaunchers() {
+        cameraLauncher = registerForActivityResult(
+                new ActivityResultContracts.TakePicture(),
+                success -> {
+                    if (success && tempCameraFilePath != null) {
+                        pendingGambarPath = tempCameraFilePath;
+                        if (dialogImgPreview != null) {
+                            loadImageIntoView(dialogImgPreview, pendingGambarPath);
+                            updateHapusGambarVisibility();
+                        }
+                    }
+                });
+
+        galleryLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        String copied = copyUriToInternal(uri);
+                        if (copied != null) {
+                            pendingGambarPath = copied;
+                            if (dialogImgPreview != null) {
+                                loadImageIntoView(dialogImgPreview, pendingGambarPath);
+                                updateHapusGambarVisibility();
+                            }
+                        } else {
+                            Toast.makeText(this, "Gagal memuat gambar", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+
+        cameraPermLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    if (granted) launchCamera();
+                    else Toast.makeText(this, "Izin kamera dibutuhkan untuk mengambil foto", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void setupSearch() {
@@ -106,6 +170,8 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         if (c != null && c.moveToFirst()) {
             do {
                 String kategori = c.getString(c.getColumnIndexOrThrow("kategori"));
+                int gambarCol = c.getColumnIndex("gambar_path");
+                String gambarPath = gambarCol >= 0 ? c.getString(gambarCol) : "";
                 listBarang.add(new BarangItem(
                         c.getInt(c.getColumnIndexOrThrow("id_barang")),
                         c.getString(c.getColumnIndexOrThrow("nama_barang")),
@@ -113,7 +179,8 @@ public class ManajemenBarangActivity extends AppCompatActivity {
                         c.getInt(c.getColumnIndexOrThrow("stok")),
                         c.getString(c.getColumnIndexOrThrow("detail_barang")),
                         c.getString(c.getColumnIndexOrThrow("ukuran")),
-                        kategori != null ? kategori : "Lainnya"
+                        kategori != null ? kategori : "Lainnya",
+                        gambarPath
                 ));
             } while (c.moveToNext());
             c.close();
@@ -146,6 +213,8 @@ public class ManajemenBarangActivity extends AppCompatActivity {
     private static final String[] DAFTAR_KATEGORI = {"Atasan", "Bawahan", "Dress", "Outer", "Aksesoris", "Lainnya"};
 
     private void showFormDialog(BarangItem existing) {
+        pendingGambarPath = existing != null ? existing.gambarPath : "";
+
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_form_barang, null);
         EditText etNama              = view.findViewById(R.id.etNamaBarangForm);
         EditText etHarga             = view.findViewById(R.id.etHargaBarangForm);
@@ -153,6 +222,32 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         EditText etDetail            = view.findViewById(R.id.etDetailBarangForm);
         EditText etUkuran            = view.findViewById(R.id.etUkuranBarangForm);
         AutoCompleteTextView actvKat = view.findViewById(R.id.actvKategoriForm);
+
+        dialogImgPreview    = view.findViewById(R.id.ivPreviewGambar);
+        dialogTvHapusGambar = view.findViewById(R.id.tvHapusGambar);
+        MaterialButton btnKamera = view.findViewById(R.id.btnKameraForm);
+        MaterialButton btnGaleri = view.findViewById(R.id.btnGaleriForm);
+
+        // Load existing image if available
+        loadImageIntoView(dialogImgPreview, pendingGambarPath);
+        updateHapusGambarVisibility();
+
+        btnKamera.setOnClickListener(v -> {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_GRANTED) {
+                launchCamera();
+            } else {
+                cameraPermLauncher.launch(Manifest.permission.CAMERA);
+            }
+        });
+
+        btnGaleri.setOnClickListener(v -> galleryLauncher.launch("image/*"));
+
+        dialogTvHapusGambar.setOnClickListener(v -> {
+            pendingGambarPath = "";
+            dialogImgPreview.setImageResource(R.drawable.ic_image_placeholder);
+            updateHapusGambarVisibility();
+        });
 
         ArrayAdapter<String> katAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, DAFTAR_KATEGORI);
@@ -173,7 +268,10 @@ public class ManajemenBarangActivity extends AppCompatActivity {
                 .setTitle(existing == null ? "Tambah Barang" : "Edit Barang")
                 .setView(view)
                 .setPositiveButton("Simpan", null)
-                .setNegativeButton("Batal", null)
+                .setNegativeButton("Batal", (d, w) -> {
+                    dialogImgPreview = null;
+                    dialogTvHapusGambar = null;
+                })
                 .create();
 
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
@@ -196,14 +294,16 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             boolean ok;
 
             if (existing == null) {
-                ok = dbHelper.insertBarang(nama, harga, stok, detail, ukuran, kategori);
+                ok = dbHelper.insertBarang(nama, harga, stok, detail, ukuran, kategori, pendingGambarPath);
                 if (ok) Toast.makeText(this, "Barang berhasil ditambahkan", Toast.LENGTH_SHORT).show();
             } else {
-                ok = dbHelper.updateBarang(existing.id, nama, harga, stok, detail, ukuran, kategori);
+                ok = dbHelper.updateBarang(existing.id, nama, harga, stok, detail, ukuran, kategori, pendingGambarPath);
                 if (ok) Toast.makeText(this, "Barang berhasil diperbarui", Toast.LENGTH_SHORT).show();
             }
 
             if (ok) {
+                dialogImgPreview = null;
+                dialogTvHapusGambar = null;
                 loadData();
                 dialog.dismiss();
             } else {
@@ -228,22 +328,76 @@ public class ManajemenBarangActivity extends AppCompatActivity {
                 .show();
     }
 
+    // ── Image helpers ─────────────────────────────────────────────────
+
+    private void launchCamera() {
+        try {
+            File dir = new File(getFilesDir(), "images");
+            if (!dir.exists()) dir.mkdirs();
+            File imageFile = new File(dir, "cam_" + System.currentTimeMillis() + ".jpg");
+            tempCameraFilePath = imageFile.getAbsolutePath();
+            Uri uri = FileProvider.getUriForFile(this, "com.example.butikkasir.provider", imageFile);
+            cameraLauncher.launch(uri);
+        } catch (Exception e) {
+            Toast.makeText(this, "Gagal membuka kamera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String copyUriToInternal(Uri uri) {
+        File dir = new File(getFilesDir(), "images");
+        if (!dir.exists()) dir.mkdirs();
+        File dest = new File(dir, "galeri_" + System.currentTimeMillis() + ".jpg");
+        try (InputStream in = getContentResolver().openInputStream(uri);
+             OutputStream out = new FileOutputStream(dest)) {
+            if (in == null) return null;
+            byte[] buf = new byte[4096];
+            int len;
+            while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+            return dest.getAbsolutePath();
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private void loadImageIntoView(ImageView iv, String path) {
+        if (path != null && !path.isEmpty() && new File(path).exists()) {
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = 2;
+            Bitmap bm = BitmapFactory.decodeFile(path, opts);
+            if (bm != null) {
+                iv.setImageBitmap(bm);
+                return;
+            }
+        }
+        iv.setImageResource(R.drawable.ic_image_placeholder);
+    }
+
+    private void updateHapusGambarVisibility() {
+        if (dialogTvHapusGambar != null) {
+            dialogTvHapusGambar.setVisibility(
+                    (pendingGambarPath != null && !pendingGambarPath.isEmpty())
+                            ? View.VISIBLE : View.GONE);
+        }
+    }
+
     // ── Inner model ──────────────────────────────────────────────────
 
     static class BarangItem {
         int id;
-        String nama, detail, ukuran, kategori;
+        String nama, detail, ukuran, kategori, gambarPath;
         double harga;
         int stok;
 
-        BarangItem(int id, String nama, double harga, int stok, String detail, String ukuran, String kategori) {
-            this.id       = id;
-            this.nama     = nama;
-            this.harga    = harga;
-            this.stok     = stok;
-            this.detail   = detail != null ? detail : "";
-            this.ukuran   = ukuran != null ? ukuran : "S,M,L,XL";
-            this.kategori = kategori != null ? kategori : "Lainnya";
+        BarangItem(int id, String nama, double harga, int stok, String detail,
+                   String ukuran, String kategori, String gambarPath) {
+            this.id         = id;
+            this.nama       = nama;
+            this.harga      = harga;
+            this.stok       = stok;
+            this.detail     = detail != null ? detail : "";
+            this.ukuran     = ukuran != null ? ukuran : "S,M,L,XL";
+            this.kategori   = kategori != null ? kategori : "Lainnya";
+            this.gambarPath = gambarPath != null ? gambarPath : "";
         }
     }
 
@@ -269,7 +423,7 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             h.tvKategori.setText(b.kategori);
             h.tvUkuran.setText("Ukuran: " + b.ukuran);
 
-            // Stock with color indicator
+            // Stock color indicator
             h.tvStok.setText("Stok: " + b.stok);
             if (b.stok <= 3) {
                 h.tvStok.setTextColor(getResources().getColor(R.color.stockColorLow, getTheme()));
@@ -279,6 +433,9 @@ public class ManajemenBarangActivity extends AppCompatActivity {
                 h.tvStok.setTextColor(getResources().getColor(R.color.stockColorHigh, getTheme()));
             }
 
+            // Load image thumbnail
+            loadImageIntoView(h.ivBarang, b.gambarPath);
+
             h.btnEdit.setOnClickListener(v -> showFormDialog(b));
             h.btnHapus.setOnClickListener(v -> showDeleteDialog(b));
         }
@@ -287,18 +444,20 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         public int getItemCount() { return list.size(); }
 
         class VH extends RecyclerView.ViewHolder {
+            ImageView ivBarang;
             TextView tvNama, tvHarga, tvStok, tvKategori, tvUkuran;
             MaterialButton btnEdit, btnHapus;
 
             VH(@NonNull View v) {
                 super(v);
-                tvNama    = v.findViewById(R.id.tvNamaBarangAdmin);
-                tvHarga   = v.findViewById(R.id.tvHargaBarangAdmin);
-                tvStok    = v.findViewById(R.id.tvStokBarangAdmin);
+                ivBarang   = v.findViewById(R.id.ivBarangAdmin);
+                tvNama     = v.findViewById(R.id.tvNamaBarangAdmin);
+                tvHarga    = v.findViewById(R.id.tvHargaBarangAdmin);
+                tvStok     = v.findViewById(R.id.tvStokBarangAdmin);
                 tvKategori = v.findViewById(R.id.tvKategoriAdmin);
-                tvUkuran  = v.findViewById(R.id.tvUkuranAdmin);
-                btnEdit   = v.findViewById(R.id.btnEditBarang);
-                btnHapus  = v.findViewById(R.id.btnHapusBarang);
+                tvUkuran   = v.findViewById(R.id.tvUkuranAdmin);
+                btnEdit    = v.findViewById(R.id.btnEditBarang);
+                btnHapus   = v.findViewById(R.id.btnHapusBarang);
             }
         }
     }

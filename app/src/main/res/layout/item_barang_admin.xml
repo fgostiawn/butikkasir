@@ -16,6 +16,18 @@
         android:padding="12dp"
         android:gravity="center_vertical">
 
+        <!-- Thumbnail gambar -->
+        <ImageView
+            android:id="@+id/ivBarangAdmin"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:scaleType="centerCrop"
+            android:background="@drawable/bg_image_rounded"
+            android:clipToOutline="true"
+            android:src="@drawable/ic_image_placeholder"
+            android:contentDescription="Gambar Barang"
+            android:layout_marginEnd="10dp" />
+
         <!-- Info section -->
         <LinearLayout
             android:layout_width="0dp"
