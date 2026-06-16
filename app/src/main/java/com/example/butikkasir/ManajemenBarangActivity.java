@@ -147,13 +147,9 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         String[] allCategories = new String[]{"Semua", "Atasan", "Bawahan", "Dress", "Outer", "Aksesoris", "Lainnya"};
 
         for (String cat : allCategories) {
-            Chip chip = new Chip(this);
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.chip_kategori, chipGroup, false);
             chip.setText(cat);
-            chip.setCheckable(true);
             chip.setChecked("Semua".equals(cat));
-            chip.setChipBackgroundColorResource(R.color.colorPrimaryContainer);
-            chip.setTextColor(getResources().getColorStateList(android.R.color.black, getTheme()));
-            chip.setCheckedIconTint(getResources().getColorStateList(R.color.colorOnPrimary, getTheme()));
             chip.setOnCheckedChangeListener((btn, isChecked) -> {
                 if (isChecked) {
                     currentKategori = cat;
