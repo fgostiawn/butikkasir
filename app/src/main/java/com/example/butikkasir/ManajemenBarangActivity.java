@@ -2,7 +2,9 @@ package com.example.butikkasir;
 
 import android.database.Cursor;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,7 +24,10 @@ import com.example.butikkasir.database.DatabaseHelper;
 import com.example.butikkasir.utils.CurrencyFormatter;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +36,11 @@ public class ManajemenBarangActivity extends AppCompatActivity {
 
     private DatabaseHelper dbHelper;
     private final List<BarangItem> listBarang = new ArrayList<>();
+    private final List<BarangItem> filteredList = new ArrayList<>();
     private BarangAdminAdapter adapter;
+
+    private String currentSearch = "";
+    private String currentKategori = "Semua";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,13 +54,50 @@ public class ManajemenBarangActivity extends AppCompatActivity {
 
         RecyclerView rv = findViewById(R.id.rvBarangAdmin);
         rv.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new BarangAdminAdapter(listBarang);
+        adapter = new BarangAdminAdapter(filteredList);
         rv.setAdapter(adapter);
 
         FloatingActionButton fab = findViewById(R.id.fabTambahBarang);
         fab.setOnClickListener(v -> showFormDialog(null));
 
+        setupSearch();
+        setupCategoryChips();
         loadData();
+    }
+
+    private void setupSearch() {
+        TextInputEditText etSearch = findViewById(R.id.etSearchBarang);
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                currentSearch = s.toString().trim();
+                applyFilter();
+            }
+        });
+    }
+
+    private void setupCategoryChips() {
+        ChipGroup chipGroup = findViewById(R.id.chipGroupKategoriAdmin);
+        String[] allCategories = new String[]{"Semua", "Atasan", "Bawahan", "Dress", "Outer", "Aksesoris", "Lainnya"};
+
+        for (String cat : allCategories) {
+            Chip chip = new Chip(this);
+            chip.setText(cat);
+            chip.setCheckable(true);
+            chip.setChecked("Semua".equals(cat));
+            chip.setChipBackgroundColorResource(R.color.colorPrimaryContainer);
+            chip.setTextColor(getResources().getColorStateList(android.R.color.black, getTheme()));
+            chip.setCheckedIconTint(getResources().getColorStateList(R.color.colorOnPrimary, getTheme()));
+            chip.setOnCheckedChangeListener((btn, isChecked) -> {
+                if (isChecked) {
+                    currentKategori = cat;
+                    applyFilter();
+                }
+            });
+            chipGroup.addView(chip);
+        }
     }
 
     private void loadData() {
@@ -72,10 +118,29 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             } while (c.moveToNext());
             c.close();
         }
+        applyFilter();
+    }
+
+    private void applyFilter() {
+        filteredList.clear();
+        for (BarangItem b : listBarang) {
+            boolean matchSearch = currentSearch.isEmpty()
+                    || b.nama.toLowerCase().contains(currentSearch.toLowerCase());
+            boolean matchKat = "Semua".equals(currentKategori)
+                    || b.kategori.equalsIgnoreCase(currentKategori);
+            if (matchSearch && matchKat) filteredList.add(b);
+        }
         adapter.notifyDataSetChanged();
 
         View emptyView = findViewById(R.id.tvEmptyBarang);
-        emptyView.setVisibility(listBarang.isEmpty() ? View.VISIBLE : View.GONE);
+        RecyclerView rv = findViewById(R.id.rvBarangAdmin);
+        if (filteredList.isEmpty()) {
+            emptyView.setVisibility(View.VISIBLE);
+            rv.setVisibility(View.GONE);
+        } else {
+            emptyView.setVisibility(View.GONE);
+            rv.setVisibility(View.VISIBLE);
+        }
     }
 
     private static final String[] DAFTAR_KATEGORI = {"Atasan", "Bawahan", "Dress", "Outer", "Aksesoris", "Lainnya"};
@@ -201,7 +266,19 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             BarangItem b = list.get(pos);
             h.tvNama.setText(b.nama);
             h.tvHarga.setText(CurrencyFormatter.formatRupiah(b.harga));
+            h.tvKategori.setText(b.kategori);
+            h.tvUkuran.setText("Ukuran: " + b.ukuran);
+
+            // Stock with color indicator
             h.tvStok.setText("Stok: " + b.stok);
+            if (b.stok <= 3) {
+                h.tvStok.setTextColor(getResources().getColor(R.color.stockColorLow, getTheme()));
+            } else if (b.stok <= 10) {
+                h.tvStok.setTextColor(getResources().getColor(R.color.stockColorMedium, getTheme()));
+            } else {
+                h.tvStok.setTextColor(getResources().getColor(R.color.stockColorHigh, getTheme()));
+            }
+
             h.btnEdit.setOnClickListener(v -> showFormDialog(b));
             h.btnHapus.setOnClickListener(v -> showDeleteDialog(b));
         }
@@ -210,16 +287,18 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         public int getItemCount() { return list.size(); }
 
         class VH extends RecyclerView.ViewHolder {
-            TextView tvNama, tvHarga, tvStok;
+            TextView tvNama, tvHarga, tvStok, tvKategori, tvUkuran;
             MaterialButton btnEdit, btnHapus;
 
             VH(@NonNull View v) {
                 super(v);
-                tvNama  = v.findViewById(R.id.tvNamaBarangAdmin);
-                tvHarga = v.findViewById(R.id.tvHargaBarangAdmin);
-                tvStok  = v.findViewById(R.id.tvStokBarangAdmin);
-                btnEdit = v.findViewById(R.id.btnEditBarang);
-                btnHapus = v.findViewById(R.id.btnHapusBarang);
+                tvNama    = v.findViewById(R.id.tvNamaBarangAdmin);
+                tvHarga   = v.findViewById(R.id.tvHargaBarangAdmin);
+                tvStok    = v.findViewById(R.id.tvStokBarangAdmin);
+                tvKategori = v.findViewById(R.id.tvKategoriAdmin);
+                tvUkuran  = v.findViewById(R.id.tvUkuranAdmin);
+                btnEdit   = v.findViewById(R.id.btnEditBarang);
+                btnHapus  = v.findViewById(R.id.btnHapusBarang);
             }
         }
     }

@@ -12,35 +12,67 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="12dp">
+        android:padding="12dp"
+        android:gravity="center_vertical">
 
-        <!-- Info barang -->
+        <!-- Info section -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvNamaBarangAdmin"
-                android:layout_width="wrap_content"
+            <!-- Nama + kategori badge -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Nama Barang"
-                android:textColor="@color/textColorPrimary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvNamaBarangAdmin"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Nama Barang"
+                    android:textColor="@color/textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/tvKategoriAdmin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Lainnya"
+                    android:textSize="10sp"
+                    android:textColor="@color/colorOnPrimary"
+                    android:background="@drawable/bg_kategori_badge"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvHargaBarangAdmin"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="3dp"
                 android:text="Rp 0"
                 android:textColor="@color/colorPrimary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvUkuranAdmin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Ukuran: S,M,L,XL"
+                android:textColor="@color/textColorSecondary"
+                android:textSize="11sp" />
 
             <TextView
                 android:id="@+id/tvStokBarangAdmin"
@@ -48,35 +80,43 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="Stok: 0"
-                android:textColor="@color/textColorSecondary"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Tombol aksi -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnEditBarang"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+        <!-- Action buttons -->
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginEnd="6dp"
-            android:paddingHorizontal="10dp"
-            android:text="Edit"
-            android:textColor="@color/colorPrimary"
-            android:textSize="12sp"
-            app:cornerRadius="8dp"
-            app:strokeColor="@color/colorPrimary" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginStart="8dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnHapusBarang"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:paddingHorizontal="10dp"
-            android:text="Hapus"
-            android:textColor="@color/errorColor"
-            android:textSize="12sp"
-            app:cornerRadius="8dp"
-            app:strokeColor="@color/errorColor" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEditBarang"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="72dp"
+                android:layout_height="34dp"
+                android:paddingHorizontal="4dp"
+                android:text="Edit"
+                android:textColor="@color/colorPrimary"
+                android:textSize="12sp"
+                app:cornerRadius="8dp"
+                app:strokeColor="@color/colorPrimary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHapusBarang"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="72dp"
+                android:layout_height="34dp"
+                android:layout_marginTop="4dp"
+                android:paddingHorizontal="4dp"
+                android:text="Hapus"
+                android:textColor="@color/errorColor"
+                android:textSize="12sp"
+                app:cornerRadius="8dp"
+                app:strokeColor="@color/errorColor" />
+        </LinearLayout>
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
