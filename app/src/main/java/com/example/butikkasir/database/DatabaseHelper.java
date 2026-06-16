@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "ButikDB";
-    private static final int DATABASE_VERSION = 6;
+    private static final int DATABASE_VERSION = 7;
 
     // Table Barang
     private static final String TABLE_BARANG = "barang";
@@ -30,6 +30,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String KEY_METODE = "metode_pembayaran";
     private static final String KEY_DETAIL = "detail_barang";
     private static final String KEY_KASIR_TRX = "nama_kasir";
+
+    // Table Pelanggan
+    private static final String TABLE_PELANGGAN = "pelanggan";
+    private static final String KEY_ID_PELANGGAN = "id_pelanggan";
+    private static final String KEY_NAMA_PELANGGAN = "nama";
+    private static final String KEY_NO_HP = "no_hp";
+    private static final String KEY_POIN = "poin";
+
+    private static final String CREATE_TABLE_PELANGGAN =
+            "CREATE TABLE IF NOT EXISTS " + TABLE_PELANGGAN + "("
+            + KEY_ID_PELANGGAN + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + KEY_NAMA_PELANGGAN + " TEXT,"
+            + KEY_NO_HP + " TEXT DEFAULT '',"
+            + KEY_POIN + " INTEGER DEFAULT 0,"
+            + "tanggal_daftar DATETIME DEFAULT CURRENT_TIMESTAMP" + ")";
 
     // Table Kasir
     private static final String TABLE_KASIR = "kasir";
@@ -71,6 +86,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.execSQL(CREATE_TABLE_KASIR);
         db.execSQL("INSERT INTO " + TABLE_KASIR + " (username, password, nama_kasir) VALUES ('kasir', '12345', 'Kasir')");
+        db.execSQL(CREATE_TABLE_PELANGGAN);
     }
 
     @Override
@@ -92,6 +108,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 6) {
             db.execSQL("ALTER TABLE " + TABLE_BARANG + " ADD COLUMN " + KEY_GAMBAR_PATH + " TEXT DEFAULT ''");
+        }
+        if (oldVersion < 7) {
+            db.execSQL(CREATE_TABLE_PELANGGAN);
         }
     }
 
@@ -366,6 +385,58 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             c.close();
         }
         return list;
+    }
+
+    // --- CRUD PELANGGAN ---
+
+    public boolean insertPelanggan(String nama, String noHp) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_NAMA_PELANGGAN, nama);
+        values.put(KEY_NO_HP, noHp != null ? noHp : "");
+        values.put(KEY_POIN, 0);
+        return db.insert(TABLE_PELANGGAN, null, values) != -1;
+    }
+
+    public Cursor getAllPelanggan() {
+        return this.getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_PELANGGAN + " ORDER BY " + KEY_NAMA_PELANGGAN + " ASC", null);
+    }
+
+    public Cursor searchPelanggan(String query) {
+        String q = "%" + query + "%";
+        return this.getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_PELANGGAN
+                + " WHERE " + KEY_NAMA_PELANGGAN + " LIKE ? OR " + KEY_NO_HP + " LIKE ?"
+                + " ORDER BY " + KEY_NAMA_PELANGGAN + " ASC",
+                new String[]{q, q});
+    }
+
+    public Cursor getPelangganById(int id) {
+        return this.getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_PELANGGAN + " WHERE " + KEY_ID_PELANGGAN + " = ?",
+                new String[]{String.valueOf(id)});
+    }
+
+    public void updatePoinSetelahTransaksi(int idPelanggan, int poinDigunakan, int poinDiperoleh) {
+        this.getWritableDatabase().execSQL(
+                "UPDATE " + TABLE_PELANGGAN
+                + " SET " + KEY_POIN + " = MAX(0, " + KEY_POIN + " - ? + ?)"
+                + " WHERE " + KEY_ID_PELANGGAN + " = ?",
+                new Object[]{poinDigunakan, poinDiperoleh, idPelanggan});
+    }
+
+    public boolean updatePelanggan(int id, String nama, String noHp) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_NAMA_PELANGGAN, nama);
+        values.put(KEY_NO_HP, noHp != null ? noHp : "");
+        return db.update(TABLE_PELANGGAN, values, KEY_ID_PELANGGAN + "=?", new String[]{String.valueOf(id)}) > 0;
+    }
+
+    public boolean deletePelanggan(int id) {
+        return this.getWritableDatabase()
+                .delete(TABLE_PELANGGAN, KEY_ID_PELANGGAN + "=?", new String[]{String.valueOf(id)}) > 0;
     }
 
     // Returns barang names that belong to a given kategori

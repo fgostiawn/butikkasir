@@ -31,6 +31,7 @@ import com.example.butikkasir.adapter.KeranjangAdapter;
 import com.example.butikkasir.database.DatabaseHelper;
 import com.example.butikkasir.model.Barang;
 import com.example.butikkasir.model.CartItem;
+import com.example.butikkasir.model.Pelanggan;
 import com.example.butikkasir.utils.CurrencyFormatter;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
@@ -44,9 +45,10 @@ import java.util.List;
 public class KasirActivity extends AppCompatActivity {
 
     private static final String KATEGORI_SEMUA = "Semua";
+    private static final int REQUEST_PELANGGAN = 101;
 
     private RecyclerView rvBarang, rvKeranjang;
-    private TextView tvTotalTagihan, tvEmptyKatalog, tvKeranjangBadge;
+    private TextView tvTotalTagihan, tvEmptyKatalog, tvKeranjangBadge, tvPelangganAktif;
     private TextInputEditText etCariBarang;
     private MaterialButton btnLanjutPembayaran;
     private DatabaseHelper dbHelper;
@@ -58,6 +60,7 @@ public class KasirActivity extends AppCompatActivity {
     private KeranjangAdapter keranjangAdapter;
     private double totalBelanjaSekarang = 0.0;
     private String kategoriAktif = KATEGORI_SEMUA;
+    private Pelanggan selectedPelanggan = null;
 
     private BottomSheetBehavior<View> bottomSheetBehavior;
 
@@ -82,6 +85,12 @@ public class KasirActivity extends AppCompatActivity {
         View bottomSheet = findViewById(R.id.bottomSheetKeranjang);
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
 
+        tvPelangganAktif = findViewById(R.id.tvPelangganAktif);
+        findViewById(R.id.cardPelanggan).setOnClickListener(v -> {
+            Intent i = new Intent(KasirActivity.this, PelangganActivity.class);
+            startActivityForResult(i, REQUEST_PELANGGAN);
+        });
+
         setupKeranjang();
         setupSearch();
         setupKategoriChips();
@@ -97,6 +106,9 @@ public class KasirActivity extends AppCompatActivity {
             intent.putExtra("TOTAL_BELANJA", totalBelanjaSekarang);
             intent.putExtra("DETAIL_TRANSAKSI", generateDetailTransaksi());
             intent.putExtra("CART_ITEMS", new ArrayList<>(cartList));
+            if (selectedPelanggan != null) {
+                intent.putExtra("PELANGGAN", selectedPelanggan);
+            }
             startActivityForResult(intent, 100);
         });
     }
@@ -317,7 +329,16 @@ public class KasirActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 100 && resultCode == RESULT_OK) {
+            selectedPelanggan = null;
+            tvPelangganAktif.setText("Tamu (Tanpa Akun)");
             resetKeranjang();
+        }
+        if (requestCode == REQUEST_PELANGGAN && resultCode == RESULT_OK && data != null) {
+            selectedPelanggan = (Pelanggan) data.getSerializableExtra("PELANGGAN");
+            if (selectedPelanggan != null) {
+                tvPelangganAktif.setText(selectedPelanggan.getNama()
+                        + "  •  " + selectedPelanggan.getPoin() + " poin");
+            }
         }
     }
 
