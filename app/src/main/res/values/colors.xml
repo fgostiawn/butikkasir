@@ -17,4 +17,7 @@
     <color name="dividerColor">#F8BBD0</color>
     <color name="errorColor">#B3261E</color>
     <color name="outlineColor">#F48FB1</color>
+    <color name="stockColorHigh">#4CAF50</color>
+    <color name="stockColorMedium">#FF9800</color>
+    <color name="stockColorLow">#B3261E</color>
 </resources>

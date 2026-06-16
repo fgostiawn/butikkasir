@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "ButikDB";
-    private static final int DATABASE_VERSION = 5;
+    private static final int DATABASE_VERSION = 6;
 
     // Table Barang
     private static final String TABLE_BARANG = "barang";
@@ -20,6 +20,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String KEY_DETAIL_BARANG = "detail_barang";
     private static final String KEY_UKURAN = "ukuran";
     private static final String KEY_KATEGORI = "kategori";
+    private static final String KEY_GAMBAR_PATH = "gambar_path";
 
     // Table Transaksi (Laporan Kasir)
     private static final String TABLE_TRANSAKSI = "transaksi";
@@ -57,7 +58,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + KEY_STOK + " INTEGER,"
                 + KEY_DETAIL_BARANG + " TEXT DEFAULT '',"
                 + KEY_UKURAN + " TEXT DEFAULT 'S,M,L,XL',"
-                + KEY_KATEGORI + " TEXT DEFAULT 'Lainnya'" + ")");
+                + KEY_KATEGORI + " TEXT DEFAULT 'Lainnya',"
+                + KEY_GAMBAR_PATH + " TEXT DEFAULT ''" + ")");
 
         db.execSQL("CREATE TABLE " + TABLE_TRANSAKSI + "("
                 + KEY_ID_TRANS + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -88,11 +90,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (oldVersion < 5) {
             db.execSQL("ALTER TABLE " + TABLE_TRANSAKSI + " ADD COLUMN " + KEY_KASIR_TRX + " TEXT DEFAULT 'Kasir'");
         }
+        if (oldVersion < 6) {
+            db.execSQL("ALTER TABLE " + TABLE_BARANG + " ADD COLUMN " + KEY_GAMBAR_PATH + " TEXT DEFAULT ''");
+        }
     }
 
     // --- CRUD BARANG ---
 
-    public boolean insertBarang(String nama, double harga, int stok, String detail, String ukuran, String kategori) {
+    public boolean insertBarang(String nama, double harga, int stok, String detail, String ukuran, String kategori, String gambarPath) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(KEY_NAMA_BARANG, nama);
@@ -101,6 +106,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(KEY_DETAIL_BARANG, detail);
         values.put(KEY_UKURAN, ukuran);
         values.put(KEY_KATEGORI, kategori != null ? kategori : "Lainnya");
+        values.put(KEY_GAMBAR_PATH, gambarPath != null ? gambarPath : "");
         return db.insert(TABLE_BARANG, null, values) != -1;
     }
 
@@ -113,7 +119,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "SELECT * FROM " + TABLE_BARANG + " WHERE " + KEY_STOK + " > 0 ORDER BY " + KEY_NAMA_BARANG + " ASC", null);
     }
 
-    public boolean updateBarang(int id, String nama, double harga, int stok, String detail, String ukuran, String kategori) {
+    public boolean updateBarang(int id, String nama, double harga, int stok, String detail, String ukuran, String kategori, String gambarPath) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(KEY_NAMA_BARANG, nama);
@@ -122,6 +128,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(KEY_DETAIL_BARANG, detail);
         values.put(KEY_UKURAN, ukuran);
         values.put(KEY_KATEGORI, kategori != null ? kategori : "Lainnya");
+        values.put(KEY_GAMBAR_PATH, gambarPath != null ? gambarPath : "");
         return db.update(TABLE_BARANG, values, KEY_ID_BARANG + "=?", new String[]{String.valueOf(id)}) > 0;
     }
 
