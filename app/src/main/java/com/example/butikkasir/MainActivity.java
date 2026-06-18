@@ -74,19 +74,22 @@ public class MainActivity extends AppCompatActivity {
             finish();
 
         // --- JALUR LOGIN ADMIN ---
-        } else if (username.equals("admin") && password.equals("admin123")) {
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean("isLoggedIn", true);
-            editor.putString("role", "admin");
-            editor.putString("namaKasir", "Admin");
-            editor.apply();
-
-            Toast.makeText(this, "Login Admin Berhasil", Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, AdminDashboardActivity.class));
-            finish();
-
         } else {
-            Toast.makeText(this, "Username atau Password salah!", Toast.LENGTH_SHORT).show();
+            String namaAdmin = dbHelper.getAdminNama(username, password);
+            if (namaAdmin != null) {
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putBoolean("isLoggedIn", true);
+                editor.putString("role", "admin");
+                editor.putString("namaKasir", namaAdmin);
+                editor.putString("username", username);
+                editor.apply();
+
+                Toast.makeText(this, "Login Admin Berhasil", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(this, AdminDashboardActivity.class));
+                finish();
+            } else {
+                Toast.makeText(this, "Username atau Password salah!", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 

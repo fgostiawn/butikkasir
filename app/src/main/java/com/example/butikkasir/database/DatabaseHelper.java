@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "ButikDB";
-    private static final int DATABASE_VERSION = 7;
+    private static final int DATABASE_VERSION = 8;
 
     // Table Barang
     private static final String TABLE_BARANG = "barang";
@@ -45,6 +45,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             + KEY_NO_HP + " TEXT DEFAULT '',"
             + KEY_POIN + " INTEGER DEFAULT 0,"
             + "tanggal_daftar DATETIME DEFAULT CURRENT_TIMESTAMP" + ")";
+
+    // Table Admin
+    private static final String TABLE_ADMIN = "admin";
+    private static final String KEY_ID_ADMIN = "id_admin";
+    private static final String KEY_USERNAME_ADMIN = "username_admin";
+    private static final String KEY_PASSWORD_ADMIN = "password_admin";
+    private static final String KEY_NAMA_ADMIN = "nama_admin";
+
+    private static final String CREATE_TABLE_ADMIN =
+            "CREATE TABLE IF NOT EXISTS " + TABLE_ADMIN + "("
+            + KEY_ID_ADMIN + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + KEY_USERNAME_ADMIN + " TEXT UNIQUE,"
+            + KEY_PASSWORD_ADMIN + " TEXT,"
+            + KEY_NAMA_ADMIN + " TEXT" + ")";
 
     // Table Kasir
     private static final String TABLE_KASIR = "kasir";
@@ -87,6 +101,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_TABLE_KASIR);
         db.execSQL("INSERT INTO " + TABLE_KASIR + " (username, password, nama_kasir) VALUES ('kasir', '12345', 'Kasir')");
         db.execSQL(CREATE_TABLE_PELANGGAN);
+        db.execSQL(CREATE_TABLE_ADMIN);
+        db.execSQL("INSERT INTO " + TABLE_ADMIN + " (username_admin, password_admin, nama_admin) VALUES ('admin', 'admin123', 'Admin')");
     }
 
     @Override
@@ -111,6 +127,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 7) {
             db.execSQL(CREATE_TABLE_PELANGGAN);
+        }
+        if (oldVersion < 8) {
+            db.execSQL(CREATE_TABLE_ADMIN);
+            db.execSQL("INSERT OR IGNORE INTO " + TABLE_ADMIN
+                    + " (username_admin, password_admin, nama_admin) VALUES ('admin', 'admin123', 'Admin')");
         }
     }
 
@@ -210,6 +231,37 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         if (c != null) c.close();
         return null;
+    }
+
+    // --- CRUD ADMIN ---
+
+    public String getAdminNama(String username, String password) {
+        Cursor c = this.getReadableDatabase().rawQuery(
+                "SELECT " + KEY_NAMA_ADMIN + " FROM " + TABLE_ADMIN
+                        + " WHERE " + KEY_USERNAME_ADMIN + "=? AND " + KEY_PASSWORD_ADMIN + "=?",
+                new String[]{username, password});
+        if (c != null && c.moveToFirst()) {
+            String nama = c.getString(0);
+            c.close();
+            return nama;
+        }
+        if (c != null) c.close();
+        return null;
+    }
+
+    public Cursor getAdminByUsername(String username) {
+        return this.getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_ADMIN + " WHERE " + KEY_USERNAME_ADMIN + " = ?",
+                new String[]{username});
+    }
+
+    public boolean updateAdmin(int id, String username, String password, String nama) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_USERNAME_ADMIN, username);
+        values.put(KEY_PASSWORD_ADMIN, password);
+        values.put(KEY_NAMA_ADMIN, nama);
+        return db.update(TABLE_ADMIN, values, KEY_ID_ADMIN + "=?", new String[]{String.valueOf(id)}) > 0;
     }
 
     // --- FITUR KASIR & LAPORAN ---
