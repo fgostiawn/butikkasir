@@ -146,21 +146,72 @@
             android:maxLines="2" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:text="Ukuran Tersedia"
+        android:textColor="@color/colorPrimary"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"
-        android:hint="Ukuran (pisahkan koma, cth: S,M,L,XL)"
-        app:boxStrokeColor="@color/colorPrimary"
-        app:hintTextColor="@color/colorPrimary">
+        android:orientation="horizontal">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etUkuranBarangForm"
-            android:layout_width="match_parent"
+        <CheckBox
+            android:id="@+id/cbUkuranS"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:inputType="text" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_weight="1"
+            android:buttonTint="@color/colorPrimary"
+            android:text="S"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="13sp" />
+
+        <CheckBox
+            android:id="@+id/cbUkuranM"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:buttonTint="@color/colorPrimary"
+            android:text="M"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="13sp" />
+
+        <CheckBox
+            android:id="@+id/cbUkuranL"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:buttonTint="@color/colorPrimary"
+            android:text="L"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="13sp" />
+
+        <CheckBox
+            android:id="@+id/cbUkuranXL"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:buttonTint="@color/colorPrimary"
+            android:text="XL"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="13sp" />
+
+        <CheckBox
+            android:id="@+id/cbUkuranXXL"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:buttonTint="@color/colorPrimary"
+            android:text="XXL"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="13sp" />
+
+    </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"

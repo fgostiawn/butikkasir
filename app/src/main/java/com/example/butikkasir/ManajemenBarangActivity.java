@@ -216,8 +216,13 @@ public class ManajemenBarangActivity extends AppCompatActivity {
         EditText etHarga             = view.findViewById(R.id.etHargaBarangForm);
         EditText etStok              = view.findViewById(R.id.etStokBarangForm);
         EditText etDetail            = view.findViewById(R.id.etDetailBarangForm);
-        EditText etUkuran            = view.findViewById(R.id.etUkuranBarangForm);
         AutoCompleteTextView actvKat = view.findViewById(R.id.actvKategoriForm);
+
+        android.widget.CheckBox cbS   = view.findViewById(R.id.cbUkuranS);
+        android.widget.CheckBox cbM   = view.findViewById(R.id.cbUkuranM);
+        android.widget.CheckBox cbL   = view.findViewById(R.id.cbUkuranL);
+        android.widget.CheckBox cbXL  = view.findViewById(R.id.cbUkuranXL);
+        android.widget.CheckBox cbXXL = view.findViewById(R.id.cbUkuranXXL);
 
         dialogImgPreview    = view.findViewById(R.id.ivPreviewGambar);
         dialogTvHapusGambar = view.findViewById(R.id.tvHapusGambar);
@@ -254,10 +259,19 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             etHarga.setText(String.valueOf((long) existing.harga));
             etStok.setText(String.valueOf(existing.stok));
             etDetail.setText(existing.detail);
-            etUkuran.setText(existing.ukuran);
             actvKat.setText(existing.kategori, false);
+            String ukuranExisting = existing.ukuran != null ? existing.ukuran.toUpperCase() : "";
+            cbS.setChecked(ukuranExisting.contains("S") && !ukuranExisting.contains("XS"));
+            cbM.setChecked(ukuranExisting.contains("M") && !ukuranExisting.contains("XM"));
+            cbL.setChecked(ukuranExisting.contains("L") && !ukuranExisting.contains("XL") && !ukuranExisting.contains("XXL"));
+            cbXL.setChecked(ukuranExisting.contains("XL") && !ukuranExisting.contains("XXL"));
+            cbXXL.setChecked(ukuranExisting.contains("XXL"));
         } else {
             actvKat.setText("Lainnya", false);
+            cbS.setChecked(true);
+            cbM.setChecked(true);
+            cbL.setChecked(true);
+            cbXL.setChecked(true);
         }
 
         AlertDialog dialog = new AlertDialog.Builder(this)
@@ -275,14 +289,23 @@ public class ManajemenBarangActivity extends AppCompatActivity {
             String hargaStr = etHarga.getText().toString().trim();
             String stokStr  = etStok.getText().toString().trim();
             String detail   = etDetail.getText().toString().trim();
-            String ukuran   = etUkuran.getText().toString().trim();
             String kategori = actvKat.getText().toString().trim();
 
             if (TextUtils.isEmpty(nama) || TextUtils.isEmpty(hargaStr) || TextUtils.isEmpty(stokStr)) {
                 Toast.makeText(this, "Nama, harga, dan stok wajib diisi", Toast.LENGTH_SHORT).show();
                 return;
             }
+
+            StringBuilder ukuranBuilder = new StringBuilder();
+            if (cbS.isChecked())   ukuranBuilder.append("S,");
+            if (cbM.isChecked())   ukuranBuilder.append("M,");
+            if (cbL.isChecked())   ukuranBuilder.append("L,");
+            if (cbXL.isChecked())  ukuranBuilder.append("XL,");
+            if (cbXXL.isChecked()) ukuranBuilder.append("XXL,");
+            String ukuran = ukuranBuilder.toString();
+            if (ukuran.endsWith(",")) ukuran = ukuran.substring(0, ukuran.length() - 1);
             if (TextUtils.isEmpty(ukuran)) ukuran = "S,M,L,XL";
+
             if (TextUtils.isEmpty(kategori)) kategori = "Lainnya";
 
             double harga = Double.parseDouble(hargaStr);

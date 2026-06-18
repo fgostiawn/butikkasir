@@ -173,7 +173,7 @@ public class PaymentActivity extends AppCompatActivity {
         btnUangPas.setCornerRadius(12);
 
         final TextInputEditText inputUang = new TextInputEditText(this);
-        inputUang.setInputType(InputType.TYPE_CLASS_NUMBER);
+        inputUang.setInputType(InputType.TYPE_CLASS_PHONE);
         inputUang.setHint("Masukkan Nominal Uang");
 
         btnUangPas.setOnClickListener(v -> inputUang.setText(String.format("%.0f", totalAkhir)));

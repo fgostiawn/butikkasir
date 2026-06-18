@@ -75,7 +75,7 @@
                 android:textSize="16sp"
                 android:textColor="@color/colorPrimary"
                 app:strokeColor="@color/colorPrimary"
-                app:cornerRadius="18dp" />
+                app:cornerRadius="8dp" />
 
             <TextView
                 android:id="@+id/cartTvQty"
@@ -99,7 +99,7 @@
                 android:textSize="16sp"
                 android:textColor="@color/colorOnPrimary"
                 app:backgroundTint="@color/colorPrimary"
-                app:cornerRadius="18dp" />
+                app:cornerRadius="8dp" />
         </LinearLayout>
 
     </LinearLayout>
