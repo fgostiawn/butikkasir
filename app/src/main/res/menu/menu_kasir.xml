@@ -8,6 +8,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_ubah_profil"
+        android:title="Ubah Profil"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_logout"
         android:title="Logout (Keluar)"
         app:showAsAction="never" />

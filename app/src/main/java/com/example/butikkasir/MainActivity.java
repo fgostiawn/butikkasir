@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
             editor.putBoolean("isLoggedIn", true);
             editor.putString("role", "kasir");
             editor.putString("namaKasir", namaKasir);
+            editor.putString("username", username);
             editor.apply();
 
             Toast.makeText(this, "Login Kasir Berhasil", Toast.LENGTH_SHORT).show();

@@ -5,13 +5,16 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -21,6 +24,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -361,11 +365,77 @@ public class KasirActivity extends AppCompatActivity {
             startActivity(new Intent(KasirActivity.this, RekapLaporanActivity.class));
             return true;
         }
+        if (item.getItemId() == R.id.action_ubah_profil) {
+            showUbahProfilDialog();
+            return true;
+        }
         if (item.getItemId() == R.id.action_logout) {
             prosesLogout();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void showUbahProfilDialog() {
+        SharedPreferences prefs = getSharedPreferences("ButikSession", MODE_PRIVATE);
+        String usernameLogin = prefs.getString("username", "");
+
+        Cursor c = dbHelper.getKasirByUsername(usernameLogin);
+        if (c == null || !c.moveToFirst()) {
+            if (c != null) c.close();
+            Toast.makeText(this, "Data profil tidak ditemukan", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        int kasirId = c.getInt(c.getColumnIndexOrThrow("id_kasir"));
+        String namaLama = c.getString(c.getColumnIndexOrThrow("nama_kasir"));
+        String usernameLama = c.getString(c.getColumnIndexOrThrow("username"));
+        String passwordLama = c.getString(c.getColumnIndexOrThrow("password"));
+        c.close();
+
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_form_kasir, null);
+        EditText etNama     = view.findViewById(R.id.etNamaKasirForm);
+        EditText etUsername = view.findViewById(R.id.etUsernameKasirForm);
+        EditText etPassword = view.findViewById(R.id.etPasswordKasirForm);
+
+        etNama.setText(namaLama);
+        etUsername.setText(usernameLama);
+        etPassword.setText(passwordLama);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Ubah Profil")
+                .setView(view)
+                .setPositiveButton("Simpan", null)
+                .setNegativeButton("Batal", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String nama     = etNama.getText().toString().trim();
+            String username = etUsername.getText().toString().trim();
+            String password = etPassword.getText().toString().trim();
+
+            if (TextUtils.isEmpty(nama) || TextUtils.isEmpty(username) || TextUtils.isEmpty(password)) {
+                Toast.makeText(this, "Semua field wajib diisi", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (password.length() < 4) {
+                Toast.makeText(this, "Password minimal 4 karakter", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            boolean ok = dbHelper.updateKasir(kasirId, username, password, nama);
+            if (ok) {
+                prefs.edit()
+                        .putString("namaKasir", nama)
+                        .putString("username", username)
+                        .apply();
+                Toast.makeText(this, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            } else {
+                Toast.makeText(this, "Gagal memperbarui profil. Username mungkin sudah digunakan.", Toast.LENGTH_SHORT).show();
+            }
+        }));
+
+        dialog.show();
     }
 
     private void prosesLogout() {

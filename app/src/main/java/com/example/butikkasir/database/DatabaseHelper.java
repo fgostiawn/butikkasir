@@ -192,6 +192,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 .delete(TABLE_KASIR, KEY_ID_KASIR + "=?", new String[]{String.valueOf(id)}) > 0;
     }
 
+    public Cursor getKasirByUsername(String username) {
+        return this.getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_KASIR + " WHERE " + KEY_USERNAME + " = ?",
+                new String[]{username});
+    }
+
     public String getKasirNama(String username, String password) {
         Cursor c = this.getReadableDatabase().rawQuery(
                 "SELECT " + KEY_NAMA_KASIR + " FROM " + TABLE_KASIR
