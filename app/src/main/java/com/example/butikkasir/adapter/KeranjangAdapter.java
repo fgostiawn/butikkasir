@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.butikkasir.R;
 import com.example.butikkasir.model.CartItem;
 import com.example.butikkasir.utils.CurrencyFormatter;
-import com.google.android.material.button.MaterialButton;
 import java.util.List;
 
 public class KeranjangAdapter extends RecyclerView.Adapter<KeranjangAdapter.CartViewHolder> {
@@ -77,17 +76,16 @@ public class KeranjangAdapter extends RecyclerView.Adapter<KeranjangAdapter.Cart
     public int getItemCount() { return cartList.size(); }
 
     public static class CartViewHolder extends RecyclerView.ViewHolder {
-        TextView tvNama, tvDetail, tvSubtotal, tvQty;
-        MaterialButton btnPlus, btnMinus;
+        TextView tvNama, tvDetail, tvSubtotal, tvQty, btnPlus, btnMinus;
 
         public CartViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvNama = itemView.findViewById(R.id.cartTvNama);
-            tvDetail = itemView.findViewById(R.id.cartTvDetail);
+            tvNama    = itemView.findViewById(R.id.cartTvNama);
+            tvDetail  = itemView.findViewById(R.id.cartTvDetail);
             tvSubtotal = itemView.findViewById(R.id.cartTvSubtotal);
-            tvQty = itemView.findViewById(R.id.cartTvQty);
-            btnPlus = itemView.findViewById(R.id.btnCartPlus);
-            btnMinus = itemView.findViewById(R.id.btnCartMinus);
+            tvQty     = itemView.findViewById(R.id.cartTvQty);
+            btnPlus   = itemView.findViewById(R.id.btnCartPlus);
+            btnMinus  = itemView.findViewById(R.id.btnCartMinus);
         }
     }
 }

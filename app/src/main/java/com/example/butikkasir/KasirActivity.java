@@ -251,9 +251,9 @@ public class KasirActivity extends AppCompatActivity {
         RadioGroup rgUkuran = view.findViewById(R.id.rgUkuran);
         MaterialButton btnMasukkanTas = view.findViewById(R.id.btnKonfirmasiKeranjang);
 
-        TextView tvQty = view.findViewById(R.id.detailTvQty);
-        MaterialButton btnMinus = view.findViewById(R.id.btnDetailMinus);
-        MaterialButton btnPlus = view.findViewById(R.id.btnDetailPlus);
+        TextView tvQty   = view.findViewById(R.id.detailTvQty);
+        TextView btnMinus = view.findViewById(R.id.btnDetailMinus);
+        TextView btnPlus  = view.findViewById(R.id.btnDetailPlus);
         final int[] qtyAwal = {1};
 
         imgBarang.setImageResource(barang.getGambarResId());

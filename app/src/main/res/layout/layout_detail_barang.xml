@@ -112,22 +112,18 @@
             android:textSize="15sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btnDetailMinus"
-            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:text="-"
-            android:textSize="18sp"
+            android:background="@drawable/bg_btn_minus"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="−"
             android:textColor="@color/colorPrimary"
-            app:strokeColor="@color/colorPrimary"
-            app:cornerRadius="8dp" />
+            android:textSize="22sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/detailTvQty"
@@ -139,21 +135,18 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btnDetailPlus"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
+            android:background="@drawable/bg_btn_plus"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
             android:text="+"
-            android:textSize="18sp"
             android:textColor="@color/colorOnPrimary"
-            app:backgroundTint="@color/colorPrimary"
-            app:cornerRadius="8dp" />
+            android:textSize="22sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <!-- Tombol Konfirmasi -->
