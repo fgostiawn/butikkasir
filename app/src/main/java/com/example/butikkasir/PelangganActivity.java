@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.TextView;
@@ -43,17 +44,31 @@ public class PelangganActivity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbarPelanggan);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        tvEmpty = findViewById(R.id.tvEmptyPelanggan);
+        tvEmpty    = findViewById(R.id.tvEmptyPelanggan);
         rvPelanggan = findViewById(R.id.rvPelanggan);
         TextInputEditText etCari = findViewById(R.id.etCariPelanggan);
-        FloatingActionButton fab = findViewById(R.id.fabTambahPelanggan);
+        FloatingActionButton fab  = findViewById(R.id.fabTambahPelanggan);
 
-        adapter = new PelangganAdapter(pelangganList, pelanggan -> {
-            Intent result = new Intent();
-            result.putExtra("PELANGGAN", pelanggan);
-            setResult(RESULT_OK, result);
-            finish();
+        adapter = new PelangganAdapter(pelangganList, new PelangganAdapter.OnActionListener() {
+            @Override
+            public void onItemClick(Pelanggan pelanggan) {
+                Intent result = new Intent();
+                result.putExtra("PELANGGAN", pelanggan);
+                setResult(RESULT_OK, result);
+                finish();
+            }
+
+            @Override
+            public void onEditClick(Pelanggan pelanggan) {
+                showDialogEdit(pelanggan);
+            }
+
+            @Override
+            public void onDeleteClick(Pelanggan pelanggan) {
+                showDialogHapus(pelanggan);
+            }
         });
+
         rvPelanggan.setLayoutManager(new LinearLayoutManager(this));
         rvPelanggan.setAdapter(adapter);
 
@@ -76,10 +91,10 @@ public class PelangganActivity extends AppCompatActivity {
         Cursor c = dbHelper.getAllPelanggan();
         if (c != null && c.moveToFirst()) {
             do {
-                int id = c.getInt(c.getColumnIndexOrThrow("id_pelanggan"));
+                int id     = c.getInt(c.getColumnIndexOrThrow("id_pelanggan"));
                 String nama = c.getString(c.getColumnIndexOrThrow("nama"));
                 String noHp = c.getString(c.getColumnIndexOrThrow("no_hp"));
-                int poin = c.getInt(c.getColumnIndexOrThrow("poin"));
+                int poin    = c.getInt(c.getColumnIndexOrThrow("poin"));
                 if (noHp == null) noHp = "";
                 pelangganListFull.add(new Pelanggan(id, nama, noHp, poin));
             } while (c.moveToNext());
@@ -106,21 +121,72 @@ public class PelangganActivity extends AppCompatActivity {
     private void showDialogTambah() {
         View view = getLayoutInflater().inflate(R.layout.dialog_form_pelanggan, null);
         TextInputEditText etNama = view.findViewById(R.id.etNamaPelangganForm);
-        TextInputEditText etHp = view.findViewById(R.id.etNoHpPelangganForm);
+        TextInputEditText etHp   = view.findViewById(R.id.etNoHpPelangganForm);
 
         new AlertDialog.Builder(this)
                 .setTitle("Tambah Pelanggan")
                 .setView(view)
                 .setPositiveButton("Simpan", (d, w) -> {
                     String nama = etNama.getText() != null ? etNama.getText().toString().trim() : "";
-                    String hp = etHp.getText() != null ? etHp.getText().toString().trim() : "";
-                    if (nama.isEmpty()) {
+                    String hp   = etHp.getText()   != null ? etHp.getText().toString().trim()   : "";
+                    if (TextUtils.isEmpty(nama)) {
                         Toast.makeText(this, "Nama tidak boleh kosong!", Toast.LENGTH_SHORT).show();
                         return;
                     }
                     dbHelper.insertPelanggan(nama, hp);
                     loadPelanggan();
                     Toast.makeText(this, nama + " berhasil ditambah", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void showDialogEdit(Pelanggan pelanggan) {
+        View view = getLayoutInflater().inflate(R.layout.dialog_form_pelanggan, null);
+        TextInputEditText etNama = view.findViewById(R.id.etNamaPelangganForm);
+        TextInputEditText etHp   = view.findViewById(R.id.etNoHpPelangganForm);
+
+        etNama.setText(pelanggan.getNama());
+        etHp.setText(pelanggan.getNoHp());
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Edit Pelanggan")
+                .setView(view)
+                .setPositiveButton("Simpan", null)
+                .setNegativeButton("Batal", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String nama = etNama.getText() != null ? etNama.getText().toString().trim() : "";
+            String hp   = etHp.getText()   != null ? etHp.getText().toString().trim()   : "";
+            if (TextUtils.isEmpty(nama)) {
+                Toast.makeText(this, "Nama tidak boleh kosong!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            boolean ok = dbHelper.updatePelanggan(pelanggan.getId(), nama, hp);
+            if (ok) {
+                Toast.makeText(this, "Data pelanggan diperbarui", Toast.LENGTH_SHORT).show();
+                loadPelanggan();
+                dialog.dismiss();
+            } else {
+                Toast.makeText(this, "Gagal memperbarui data", Toast.LENGTH_SHORT).show();
+            }
+        }));
+
+        dialog.show();
+    }
+
+    private void showDialogHapus(Pelanggan pelanggan) {
+        new AlertDialog.Builder(this)
+                .setTitle("Hapus Pelanggan")
+                .setMessage("Hapus pelanggan \"" + pelanggan.getNama() + "\"?\nData poin juga akan ikut terhapus.")
+                .setPositiveButton("Hapus", (d, w) -> {
+                    if (dbHelper.deletePelanggan(pelanggan.getId())) {
+                        Toast.makeText(this, "Pelanggan berhasil dihapus", Toast.LENGTH_SHORT).show();
+                        loadPelanggan();
+                    } else {
+                        Toast.makeText(this, "Gagal menghapus pelanggan", Toast.LENGTH_SHORT).show();
+                    }
                 })
                 .setNegativeButton("Batal", null)
                 .show();

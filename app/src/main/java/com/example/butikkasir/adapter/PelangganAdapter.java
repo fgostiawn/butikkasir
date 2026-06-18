@@ -10,19 +10,22 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.butikkasir.R;
 import com.example.butikkasir.model.Pelanggan;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.List;
 
 public class PelangganAdapter extends RecyclerView.Adapter<PelangganAdapter.ViewHolder> {
 
-    public interface OnItemClickListener {
+    public interface OnActionListener {
         void onItemClick(Pelanggan pelanggan);
+        void onEditClick(Pelanggan pelanggan);
+        void onDeleteClick(Pelanggan pelanggan);
     }
 
     private final List<Pelanggan> list;
-    private final OnItemClickListener listener;
+    private final OnActionListener listener;
 
-    public PelangganAdapter(List<Pelanggan> list, OnItemClickListener listener) {
+    public PelangganAdapter(List<Pelanggan> list, OnActionListener listener) {
         this.list = list;
         this.listener = listener;
     }
@@ -44,6 +47,8 @@ public class PelangganAdapter extends RecyclerView.Adapter<PelangganAdapter.View
         holder.tvNoHp.setText(p.getNoHp().isEmpty() ? "Tidak ada no. HP" : p.getNoHp());
         holder.tvPoin.setText(p.getPoin() + " poin");
         holder.itemView.setOnClickListener(v -> listener.onItemClick(p));
+        holder.btnEdit.setOnClickListener(v -> listener.onEditClick(p));
+        holder.btnHapus.setOnClickListener(v -> listener.onDeleteClick(p));
     }
 
     @Override
@@ -51,13 +56,16 @@ public class PelangganAdapter extends RecyclerView.Adapter<PelangganAdapter.View
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvInisial, tvNama, tvNoHp, tvPoin;
+        MaterialButton btnEdit, btnHapus;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvInisial = itemView.findViewById(R.id.tvInisialPelanggan);
-            tvNama = itemView.findViewById(R.id.tvNamaPelanggan);
-            tvNoHp = itemView.findViewById(R.id.tvNoHpPelanggan);
-            tvPoin = itemView.findViewById(R.id.tvPoinPelanggan);
+            tvNama    = itemView.findViewById(R.id.tvNamaPelanggan);
+            tvNoHp    = itemView.findViewById(R.id.tvNoHpPelanggan);
+            tvPoin    = itemView.findViewById(R.id.tvPoinPelanggan);
+            btnEdit   = itemView.findViewById(R.id.btnEditPelanggan);
+            btnHapus  = itemView.findViewById(R.id.btnHapusPelanggan);
         }
     }
 }

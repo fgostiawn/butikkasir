@@ -1,9 +1,11 @@
 package com.example.butikkasir.adapter;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.butikkasir.R;
@@ -47,9 +49,15 @@ public class KeranjangAdapter extends RecyclerView.Adapter<KeranjangAdapter.Cart
         holder.tvQty.setText(String.valueOf(item.getQuantity()));
 
         holder.btnPlus.setOnClickListener(v -> {
-            item.setQuantity(item.getQuantity() + 1);
-            notifyItemChanged(position);
-            listener.onQuantityChanged();
+            int stokTersedia = item.getBarang().getStok();
+            if (item.getQuantity() < stokTersedia) {
+                item.setQuantity(item.getQuantity() + 1);
+                notifyItemChanged(position);
+                listener.onQuantityChanged();
+            } else {
+                Context ctx = holder.itemView.getContext();
+                Toast.makeText(ctx, "Stok hanya " + stokTersedia + " pcs", Toast.LENGTH_SHORT).show();
+            }
         });
 
         holder.btnMinus.setOnClickListener(v -> {

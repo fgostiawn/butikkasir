@@ -62,24 +62,43 @@
                 android:text="No. HP"
                 android:textColor="@color/textColorSecondary"
                 android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- Poin -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center">
 
             <TextView
                 android:id="@+id/tvPoinPelanggan"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:text="0 poin"
                 android:textColor="@color/colorPrimary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
+
+        <!-- Tombol aksi -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditPelanggan"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginEnd="6dp"
+            android:paddingHorizontal="10dp"
+            android:text="Edit"
+            android:textColor="@color/colorPrimary"
+            android:textSize="12sp"
+            app:cornerRadius="8dp"
+            app:strokeColor="@color/colorPrimary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHapusPelanggan"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:paddingHorizontal="10dp"
+            android:text="Hapus"
+            android:textColor="@color/errorColor"
+            android:textSize="12sp"
+            app:cornerRadius="8dp"
+            app:strokeColor="@color/errorColor" />
 
     </LinearLayout>
 
