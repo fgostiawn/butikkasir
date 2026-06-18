@@ -42,6 +42,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         MaterialCardView cardKasir          = findViewById(R.id.cardKasir);
         MaterialCardView cardUbahProfil     = findViewById(R.id.cardUbahProfilAdmin);
         MaterialCardView cardBackup         = findViewById(R.id.cardBackup);
+        MaterialCardView cardPengaturanToko = findViewById(R.id.cardPengaturanToko);
+        MaterialCardView cardVoucher        = findViewById(R.id.cardVoucherAdmin);
+        MaterialCardView cardHutang         = findViewById(R.id.cardHutangAdmin);
 
         cardLaporan.setOnClickListener(v ->
                 startActivity(new Intent(this, LaporanActivity.class)));
@@ -58,6 +61,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
         cardUbahProfil.setOnClickListener(v -> showUbahProfilAdmin());
         cardBackup.setOnClickListener(v ->
                 startActivity(new Intent(this, BackupActivity.class)));
+        cardPengaturanToko.setOnClickListener(v -> showPengaturanToko());
+        cardVoucher.setOnClickListener(v ->
+                startActivity(new Intent(this, ManajemenVoucherActivity.class)));
+        cardHutang.setOnClickListener(v ->
+                startActivity(new Intent(this, ManajemenHutangActivity.class)));
 
         findViewById(R.id.btnLogoutAdmin).setOnClickListener(v -> konfirmasiLogout());
     }
@@ -132,6 +140,41 @@ public class AdminDashboardActivity extends AppCompatActivity {
             }
         }));
 
+        dialog.show();
+    }
+
+    private void showPengaturanToko() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_pengaturan_toko, null);
+        EditText etNama    = view.findViewById(R.id.etNamaToko);
+        EditText etWa      = view.findViewById(R.id.etNomorWA);
+        EditText etTagline = view.findViewById(R.id.etTagline);
+
+        etNama.setText(dbHelper.getPengaturan("nama_toko"));
+        etWa.setText(dbHelper.getPengaturan("nomor_wa"));
+        etTagline.setText(dbHelper.getPengaturan("tagline"));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Pengaturan Toko")
+                .setView(view)
+                .setPositiveButton("Simpan", null)
+                .setNegativeButton("Batal", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String nama    = etNama.getText().toString().trim();
+            String wa      = etWa.getText().toString().trim();
+            String tagline = etTagline.getText().toString().trim();
+
+            if (nama.isEmpty()) {
+                Toast.makeText(this, "Nama toko tidak boleh kosong", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            dbHelper.setPengaturan("nama_toko", nama);
+            dbHelper.setPengaturan("nomor_wa", wa);
+            dbHelper.setPengaturan("tagline", tagline.isEmpty() ? "Terima kasih telah berbelanja!" : tagline);
+            Toast.makeText(this, "Pengaturan toko disimpan", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        }));
         dialog.show();
     }
 

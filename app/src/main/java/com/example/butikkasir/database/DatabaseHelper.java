@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "ButikDB";
-    private static final int DATABASE_VERSION = 8;
+    private static final int DATABASE_VERSION = 9;
 
     // Table Barang
     private static final String TABLE_BARANG = "barang";
@@ -74,6 +74,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             + KEY_PASSWORD + " TEXT,"
             + KEY_NAMA_KASIR + " TEXT" + ")";
 
+    // Table Pengaturan Toko
+    private static final String TABLE_PENGATURAN = "pengaturan_toko";
+
+    private static final String CREATE_TABLE_PENGATURAN =
+            "CREATE TABLE IF NOT EXISTS " + TABLE_PENGATURAN + "("
+            + "key TEXT PRIMARY KEY, value TEXT)";
+
+    // Table Voucher
+    private static final String TABLE_VOUCHER = "voucher";
+
+    private static final String CREATE_TABLE_VOUCHER =
+            "CREATE TABLE IF NOT EXISTS " + TABLE_VOUCHER + "("
+            + "id_voucher INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "kode TEXT UNIQUE,"
+            + "jenis TEXT,"
+            + "nilai REAL,"
+            + "min_belanja REAL DEFAULT 0,"
+            + "max_penggunaan INTEGER DEFAULT 0,"
+            + "sudah_dipakai INTEGER DEFAULT 0,"
+            + "aktif INTEGER DEFAULT 1)";
+
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -96,13 +117,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + KEY_TOTAL + " REAL,"
                 + KEY_METODE + " TEXT,"
                 + KEY_DETAIL + " TEXT,"
-                + KEY_KASIR_TRX + " TEXT DEFAULT 'Kasir'" + ")");
+                + KEY_KASIR_TRX + " TEXT DEFAULT 'Kasir',"
+                + "status_transaksi TEXT DEFAULT 'LUNAS',"
+                + "id_pelanggan_trx INTEGER DEFAULT -1" + ")");
 
         db.execSQL(CREATE_TABLE_KASIR);
         db.execSQL("INSERT INTO " + TABLE_KASIR + " (username, password, nama_kasir) VALUES ('kasir', '12345', 'Kasir')");
         db.execSQL(CREATE_TABLE_PELANGGAN);
         db.execSQL(CREATE_TABLE_ADMIN);
         db.execSQL("INSERT INTO " + TABLE_ADMIN + " (username_admin, password_admin, nama_admin) VALUES ('admin', 'admin123', 'Admin')");
+        db.execSQL(CREATE_TABLE_PENGATURAN);
+        db.execSQL("INSERT INTO " + TABLE_PENGATURAN + " (key, value) VALUES ('nama_toko', 'BUTIK DEA')");
+        db.execSQL("INSERT INTO " + TABLE_PENGATURAN + " (key, value) VALUES ('nomor_wa', '0812-XXXX-XXXX')");
+        db.execSQL("INSERT INTO " + TABLE_PENGATURAN + " (key, value) VALUES ('tagline', 'Terima kasih telah berbelanja!')");
+        db.execSQL(CREATE_TABLE_VOUCHER);
     }
 
     @Override
@@ -132,6 +160,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_TABLE_ADMIN);
             db.execSQL("INSERT OR IGNORE INTO " + TABLE_ADMIN
                     + " (username_admin, password_admin, nama_admin) VALUES ('admin', 'admin123', 'Admin')");
+        }
+        if (oldVersion < 9) {
+            try { db.execSQL("ALTER TABLE " + TABLE_TRANSAKSI + " ADD COLUMN status_transaksi TEXT DEFAULT 'LUNAS'"); } catch (Exception ignored) {}
+            try { db.execSQL("ALTER TABLE " + TABLE_TRANSAKSI + " ADD COLUMN id_pelanggan_trx INTEGER DEFAULT -1"); } catch (Exception ignored) {}
+            db.execSQL(CREATE_TABLE_PENGATURAN);
+            db.execSQL("INSERT OR IGNORE INTO " + TABLE_PENGATURAN + " (key, value) VALUES ('nama_toko', 'BUTIK DEA')");
+            db.execSQL("INSERT OR IGNORE INTO " + TABLE_PENGATURAN + " (key, value) VALUES ('nomor_wa', '0812-XXXX-XXXX')");
+            db.execSQL("INSERT OR IGNORE INTO " + TABLE_PENGATURAN + " (key, value) VALUES ('tagline', 'Terima kasih telah berbelanja!')");
+            db.execSQL(CREATE_TABLE_VOUCHER);
         }
     }
 
@@ -508,6 +545,112 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             c.close();
         }
         return list;
+    }
+
+    // --- PENGATURAN TOKO ---
+
+    public String getPengaturan(String key) {
+        Cursor c = this.getReadableDatabase().rawQuery(
+                "SELECT value FROM " + TABLE_PENGATURAN + " WHERE key = ?", new String[]{key});
+        if (c != null && c.moveToFirst()) {
+            String v = c.getString(0);
+            c.close();
+            return v != null ? v : "";
+        }
+        if (c != null) c.close();
+        return "";
+    }
+
+    public void setPengaturan(String key, String value) {
+        ContentValues cv = new ContentValues();
+        cv.put("key", key);
+        cv.put("value", value != null ? value : "");
+        this.getWritableDatabase().insertWithOnConflict(
+                TABLE_PENGATURAN, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    // --- VOUCHER ---
+
+    public boolean insertVoucher(String kode, String jenis, double nilai, double minBelanja, int maxPenggunaan) {
+        ContentValues cv = new ContentValues();
+        cv.put("kode", kode.toUpperCase());
+        cv.put("jenis", jenis);
+        cv.put("nilai", nilai);
+        cv.put("min_belanja", minBelanja);
+        cv.put("max_penggunaan", maxPenggunaan);
+        return this.getWritableDatabase().insert(TABLE_VOUCHER, null, cv) != -1;
+    }
+
+    public Cursor getAllVoucher() {
+        return this.getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_VOUCHER + " ORDER BY id_voucher DESC", null);
+    }
+
+    public Cursor getVoucherByKode(String kode) {
+        return this.getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_VOUCHER + " WHERE kode = ? AND aktif = 1",
+                new String[]{kode.toUpperCase()});
+    }
+
+    public void incrementVoucherPakai(int id) {
+        this.getWritableDatabase().execSQL(
+                "UPDATE " + TABLE_VOUCHER + " SET sudah_dipakai = sudah_dipakai + 1 WHERE id_voucher = ?",
+                new Object[]{id});
+    }
+
+    public boolean deleteVoucher(int id) {
+        return this.getWritableDatabase()
+                .delete(TABLE_VOUCHER, "id_voucher = ?", new String[]{String.valueOf(id)}) > 0;
+    }
+
+    // --- TRANSAKSI FULL (with status & pelanggan) ---
+
+    public long insertTransaksiDanKurangiStokFull(double total, String metode, String detail,
+                                                   String kasir, String status, int idPelanggan,
+                                                   java.util.List<com.example.butikkasir.model.CartItem> cartItems) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(KEY_TOTAL, total);
+        cv.put(KEY_METODE, metode);
+        cv.put(KEY_DETAIL, detail);
+        cv.put(KEY_KASIR_TRX, kasir != null ? kasir : "Kasir");
+        cv.put("status_transaksi", status != null ? status : "LUNAS");
+        cv.put("id_pelanggan_trx", idPelanggan);
+        long transId = db.insert(TABLE_TRANSAKSI, null, cv);
+        if (transId > 0 && cartItems != null) {
+            for (com.example.butikkasir.model.CartItem item : cartItems) {
+                kurangiStok(item.getBarang().getId(), item.getQuantity());
+            }
+        }
+        return transId;
+    }
+
+    // --- HUTANG ---
+
+    public Cursor getHutangList() {
+        return this.getReadableDatabase().rawQuery(
+                "SELECT t.id_transaksi, t.tanggal, t.total_belanja, t.metode_pembayaran, "
+                + "t.nama_kasir, t.id_pelanggan_trx, "
+                + "COALESCE(p.nama, 'Tamu') AS nama_pelanggan "
+                + "FROM " + TABLE_TRANSAKSI + " t "
+                + "LEFT JOIN " + TABLE_PELANGGAN + " p ON t.id_pelanggan_trx = p.id_pelanggan "
+                + "WHERE t.status_transaksi = 'HUTANG' ORDER BY t.tanggal DESC", null);
+    }
+
+    public boolean lunasiHutang(int idTransaksi) {
+        ContentValues cv = new ContentValues();
+        cv.put("status_transaksi", "LUNAS");
+        return this.getWritableDatabase()
+                .update(TABLE_TRANSAKSI, cv, "id_transaksi = ?",
+                        new String[]{String.valueOf(idTransaksi)}) > 0;
+    }
+
+    // --- RIWAYAT KASIR HARI INI ---
+
+    public Cursor getTodayTransaksiByKasir(String kasir) {
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                .format(new java.util.Date());
+        return getLaporanFiltered(today, today, kasir);
     }
 
     // Returns all barang ordered by stok ASC (low stock first)

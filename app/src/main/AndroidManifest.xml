@@ -69,6 +69,18 @@
             android:name=".BackupActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".RiwayatKasirActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ManajemenVoucherActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ManajemenHutangActivity"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.example.butikkasir.provider"

@@ -8,6 +8,7 @@
 
     <!-- Store header -->
     <TextView
+        android:id="@+id/strukTvNamaToko"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -18,6 +19,7 @@
         android:layout_marginBottom="2dp" />
 
     <TextView
+        android:id="@+id/strukTvSubjudul"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -26,6 +28,7 @@
         android:textSize="12sp" />
 
     <TextView
+        android:id="@+id/strukTvNomorWA"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -154,6 +157,75 @@
         android:background="#F8BBD0"
         android:layout_marginBottom="12dp" />
 
+    <!-- Subtotal sebelum diskon (hidden by default) -->
+    <LinearLayout
+        android:id="@+id/strukLayoutSubtotal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Subtotal"
+            android:textColor="#757575"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/strukTvSubtotal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#212121"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Diskon Poin (hidden by default) -->
+    <LinearLayout
+        android:id="@+id/strukLayoutDiskonPoin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Diskon Poin"
+            android:textColor="#757575"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/strukTvDiskonPoin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#388E3C"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Diskon Voucher (hidden by default) -->
+    <LinearLayout
+        android:id="@+id/strukLayoutDiskonVoucher"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Diskon Voucher"
+            android:textColor="#757575"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/strukTvDiskonVoucher"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#388E3C"
+            android:textSize="12sp" />
+    </LinearLayout>
+
     <!-- Total -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -257,7 +329,23 @@
         android:layout_marginTop="14dp"
         android:layout_marginBottom="14dp" />
 
+    <!-- Status HUTANG badge -->
     <TextView
+        android:id="@+id/strukTvStatusHutang"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="6dp"
+        android:text="⚠ STATUS: BELUM LUNAS"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="#F44336"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/strukTvTagline"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"

@@ -361,6 +361,10 @@ public class KasirActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_riwayat_kasir) {
+            startActivity(new Intent(KasirActivity.this, RiwayatKasirActivity.class));
+            return true;
+        }
         if (item.getItemId() == R.id.action_laporan) {
             startActivity(new Intent(KasirActivity.this, RekapLaporanActivity.class));
             return true;

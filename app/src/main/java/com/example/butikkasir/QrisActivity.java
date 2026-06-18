@@ -150,7 +150,26 @@ public class QrisActivity extends AppCompatActivity {
 
     private void populateStrukView(View root, long transId, String tanggal,
                                    String kasirName, String metode) {
-        ((TextView) root.findViewById(R.id.strukTvId)).setText("#" + (transId > 0 ? transId : "—"));
+        // Update store header dari DB
+        String namaToko = dbHelper.getPengaturan("nama_toko");
+        if (namaToko.isEmpty()) namaToko = "BUTIK DEA";
+        String nomorWa = dbHelper.getPengaturan("nomor_wa");
+        if (nomorWa.isEmpty()) nomorWa = "0812-XXXX-XXXX";
+        String tagline = dbHelper.getPengaturan("tagline");
+        if (tagline.isEmpty()) tagline = "Terima kasih telah berbelanja!";
+
+        TextView tvNamaToko = root.findViewById(R.id.strukTvNamaToko);
+        if (tvNamaToko != null) tvNamaToko.setText(namaToko);
+        TextView tvWA = root.findViewById(R.id.strukTvNomorWA);
+        if (tvWA != null) tvWA.setText("WA: " + nomorWa);
+        TextView tvTagline = root.findViewById(R.id.strukTvTagline);
+        if (tvTagline != null) tvTagline.setText(tagline);
+
+        String dateStr = new SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(new Date());
+        String formattedId = transId > 0
+                ? String.format("TRX-%s-%04d", dateStr, transId) : "—";
+
+        ((TextView) root.findViewById(R.id.strukTvId)).setText(formattedId);
         ((TextView) root.findViewById(R.id.strukTvTanggal)).setText(tanggal);
         ((TextView) root.findViewById(R.id.strukTvKasir)).setText(kasirName);
         ((TextView) root.findViewById(R.id.strukTvMetode)).setText(metode);
@@ -295,9 +314,13 @@ public class QrisActivity extends AppCompatActivity {
                 .getString("namaKasir", "Kasir");
         String tanggal = new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID"))
                 .format(new Date());
+        String namaToko = dbHelper.getPengaturan("nama_toko");
+        if (namaToko.isEmpty()) namaToko = "BUTIK DEA";
+        String dateStr = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        String formattedId = String.format("TRX-%s-%04d", dateStr, transId);
         StringBuilder sb = new StringBuilder();
-        sb.append("*BUTIK KASIR*\n");
-        sb.append("Struk #").append(transId).append("\n\n");
+        sb.append("*").append(namaToko).append("*\n");
+        sb.append(formattedId).append("\n\n");
         sb.append("Tanggal : ").append(tanggal).append("\n");
         sb.append("Kasir   : ").append(kasirName).append("\n\n");
         sb.append("*Item Belanja:*\n");
@@ -342,9 +365,13 @@ public class QrisActivity extends AppCompatActivity {
     }
 
     private String buildTextReceipt(long transId) {
+        String namaToko = dbHelper.getPengaturan("nama_toko");
+        if (namaToko.isEmpty()) namaToko = "BUTIK DEA";
+        String dateStr = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        String formattedId = String.format("TRX-%s-%04d", dateStr, transId);
         StringBuilder sb = new StringBuilder();
-        sb.append("====== BUTIK KASIR ======\n");
-        sb.append("No. Transaksi : #").append(transId).append("\n");
+        sb.append("====== ").append(namaToko).append(" ======\n");
+        sb.append("No. Transaksi : ").append(formattedId).append("\n");
         sb.append("Tanggal       : ")
           .append(new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID")).format(new Date()))
           .append("\n");

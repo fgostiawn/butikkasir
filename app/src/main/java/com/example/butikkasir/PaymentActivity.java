@@ -2,6 +2,7 @@ package com.example.butikkasir;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -47,19 +48,26 @@ import java.util.Locale;
 
 public class PaymentActivity extends AppCompatActivity {
 
-    private static final String NAMA_TOKO = "BUTIK DEA";
-    private static final String NOMOR_WA   = "0812-XXXX-XXXX";
     private static final int POIN_PER_RUPIAH = 10000;
     private static final int NILAI_POIN = 100;
 
     private double totalBelanja;
     private double totalAkhir;
     private double diskonPoin = 0;
+    private double diskonVoucher = 0;
     private int poinDigunakan = 0;
+    private int idVoucher = -1;
+    private String kodeVoucher = null;
     private String detailTransaksi;
     private List<CartItem> cartItems;
     private DatabaseHelper dbHelper;
     private Pelanggan pelanggan = null;
+
+    private String namaToko;
+    private String nomorWa;
+    private String tagline;
+
+    private TextView tvTotal;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +75,15 @@ public class PaymentActivity extends AppCompatActivity {
         setContentView(R.layout.activity_payment);
 
         dbHelper = new DatabaseHelper(this);
+
+        // Load pengaturan toko dari DB
+        namaToko = dbHelper.getPengaturan("nama_toko");
+        if (namaToko.isEmpty()) namaToko = "BUTIK DEA";
+        nomorWa = dbHelper.getPengaturan("nomor_wa");
+        if (nomorWa.isEmpty()) nomorWa = "0812-XXXX-XXXX";
+        tagline = dbHelper.getPengaturan("tagline");
+        if (tagline.isEmpty()) tagline = "Terima kasih telah berbelanja!";
+
         totalBelanja = getIntent().getDoubleExtra("TOTAL_BELANJA", 0);
         totalAkhir = totalBelanja;
         detailTransaksi = getIntent().getStringExtra("DETAIL_TRANSAKSI");
@@ -81,7 +98,7 @@ public class PaymentActivity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbarPayment);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        TextView tvTotal = findViewById(R.id.payTvTotal);
+        tvTotal = findViewById(R.id.payTvTotal);
         tvTotal.setText(CurrencyFormatter.formatRupiah(totalBelanja));
 
         // Populate ringkasan belanja
@@ -100,18 +117,21 @@ public class PaymentActivity extends AppCompatActivity {
             payItemContainer.addView(tv);
         }
 
-        setupPoinCard(tvTotal);
+        setupPoinCard();
+        setupVoucherCard();
 
         findViewById(R.id.payBtnCash).setOnClickListener(v -> dialogCash());
         findViewById(R.id.payBtnDebit).setOnClickListener(v -> dialogDebit());
         findViewById(R.id.payBtnQris).setOnClickListener(v -> dialogPilihEWallet());
+        findViewById(R.id.payBtnSplit).setOnClickListener(v -> dialogSplitPayment());
+        findViewById(R.id.payBtnHutang).setOnClickListener(v -> dialogHutang());
     }
 
     // ──────────────────────────────────────────────────────────────
     //  Poin setup
     // ──────────────────────────────────────────────────────────────
 
-    private void setupPoinCard(TextView tvTotal) {
+    private void setupPoinCard() {
         if (pelanggan == null) return;
 
         View cardPoin = findViewById(R.id.cardPoinPelanggan);
@@ -138,18 +158,99 @@ public class PaymentActivity extends AppCompatActivity {
                 if (isChecked) {
                     diskonPoin = maxDiskon;
                     poinDigunakan = maxPoin;
-                    totalAkhir = totalBelanja - diskonPoin;
-                    tvTotal.setText(CurrencyFormatter.formatRupiah(totalAkhir));
-                    tvInfo.setText("Diskon poin: -" + CurrencyFormatter.formatRupiah(diskonPoin));
-                    tvInfo.setVisibility(View.VISIBLE);
                 } else {
                     diskonPoin = 0;
                     poinDigunakan = 0;
-                    totalAkhir = totalBelanja;
-                    tvTotal.setText(CurrencyFormatter.formatRupiah(totalAkhir));
-                    tvInfo.setVisibility(View.GONE);
                 }
+                recalcTotal(tvInfo);
             });
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Voucher setup
+    // ──────────────────────────────────────────────────────────────
+
+    private void setupVoucherCard() {
+        TextInputEditText etKode = findViewById(R.id.etKodeVoucher);
+        MaterialButton btnTerapkan = findViewById(R.id.btnTerapkanVoucher);
+        TextView tvInfo = findViewById(R.id.tvInfoVoucher);
+
+        btnTerapkan.setOnClickListener(v -> {
+            String kode = etKode.getText() != null ? etKode.getText().toString().trim().toUpperCase() : "";
+            if (kode.isEmpty()) {
+                Toast.makeText(this, "Masukkan kode voucher", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Cursor c = dbHelper.getVoucherByKode(kode);
+            if (c == null || !c.moveToFirst()) {
+                if (c != null) c.close();
+                tvInfo.setText("Voucher tidak ditemukan atau tidak aktif");
+                tvInfo.setTextColor(Color.parseColor("#F44336"));
+                tvInfo.setVisibility(View.VISIBLE);
+                diskonVoucher = 0;
+                idVoucher = -1;
+                kodeVoucher = null;
+                recalcTotal(null);
+                return;
+            }
+
+            int vId = c.getInt(c.getColumnIndexOrThrow("id_voucher"));
+            String jenis = c.getString(c.getColumnIndexOrThrow("jenis"));
+            double nilai = c.getDouble(c.getColumnIndexOrThrow("nilai"));
+            double minBelanja = c.getDouble(c.getColumnIndexOrThrow("min_belanja"));
+            int maxPenggunaan = c.getInt(c.getColumnIndexOrThrow("max_penggunaan"));
+            int sudahPakai = c.getInt(c.getColumnIndexOrThrow("sudah_dipakai"));
+            c.close();
+
+            if (totalBelanja < minBelanja) {
+                tvInfo.setText("Min. belanja " + CurrencyFormatter.formatRupiah(minBelanja) + " untuk voucher ini");
+                tvInfo.setTextColor(Color.parseColor("#F44336"));
+                tvInfo.setVisibility(View.VISIBLE);
+                return;
+            }
+            if (maxPenggunaan > 0 && sudahPakai >= maxPenggunaan) {
+                tvInfo.setText("Voucher sudah habis digunakan");
+                tvInfo.setTextColor(Color.parseColor("#F44336"));
+                tvInfo.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            double diskon;
+            if ("persen".equals(jenis)) {
+                diskon = totalBelanja * nilai / 100.0;
+            } else {
+                diskon = nilai;
+            }
+            diskon = Math.min(diskon, totalBelanja);
+
+            diskonVoucher = diskon;
+            idVoucher = vId;
+            kodeVoucher = kode;
+
+            String desc = "persen".equals(jenis)
+                    ? "(" + (int)nilai + "%) "
+                    : "";
+            tvInfo.setText("✓ Hemat " + desc + CurrencyFormatter.formatRupiah(diskon) + " dengan voucher " + kode);
+            tvInfo.setTextColor(Color.parseColor("#388E3C"));
+            tvInfo.setVisibility(View.VISIBLE);
+            recalcTotal(null);
+        });
+    }
+
+    private void recalcTotal(TextView tvInfoPoin) {
+        totalAkhir = totalBelanja - diskonPoin - diskonVoucher;
+        if (totalAkhir < 0) totalAkhir = 0;
+        tvTotal.setText(CurrencyFormatter.formatRupiah(totalAkhir));
+
+        if (tvInfoPoin != null) {
+            if (diskonPoin > 0) {
+                tvInfoPoin.setText("Diskon poin: -" + CurrencyFormatter.formatRupiah(diskonPoin));
+                tvInfoPoin.setVisibility(View.VISIBLE);
+            } else {
+                tvInfoPoin.setVisibility(View.GONE);
+            }
         }
     }
 
@@ -157,6 +258,20 @@ public class PaymentActivity extends AppCompatActivity {
         if (pelanggan == null) return;
         int poinDiperoleh = (int) (totalAkhir / POIN_PER_RUPIAH);
         dbHelper.updatePoinSetelahTransaksi(pelanggan.getId(), poinDigunakan, poinDiperoleh);
+    }
+
+    private void markVoucherUsed() {
+        if (idVoucher > 0) {
+            dbHelper.incrementVoucherPakai(idVoucher);
+        }
+    }
+
+    private String kasirName() {
+        return getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
+    }
+
+    private int pelangganId() {
+        return pelanggan != null ? pelanggan.getId() : -1;
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -168,15 +283,43 @@ public class PaymentActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 20);
 
-        MaterialButton btnUangPas = new MaterialButton(this);
-        btnUangPas.setText("UANG PAS (" + CurrencyFormatter.formatRupiah(totalAkhir) + ")");
-        btnUangPas.setCornerRadius(12);
+        // Quick amount buttons
+        long[] quickAmounts = {50000, 100000, 200000, 500000};
+        LinearLayout quickRow = new LinearLayout(this);
+        quickRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams quickRowLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        quickRowLp.bottomMargin = dpToPx(10);
+        quickRow.setLayoutParams(quickRowLp);
 
         final TextInputEditText inputUang = new TextInputEditText(this);
         inputUang.setInputType(InputType.TYPE_CLASS_PHONE);
         inputUang.setHint("Masukkan Nominal Uang");
 
+        MaterialButton btnUangPas = new MaterialButton(this);
+        btnUangPas.setText("UANG PAS");
+        btnUangPas.setCornerRadius(12);
+        LinearLayout.LayoutParams pasBtnLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        pasBtnLp.bottomMargin = dpToPx(8);
+        btnUangPas.setLayoutParams(pasBtnLp);
         btnUangPas.setOnClickListener(v -> inputUang.setText(String.format("%.0f", totalAkhir)));
+
+        for (long amt : quickAmounts) {
+            MaterialButton btn = new MaterialButton(this, null,
+                    com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            String label = amt >= 1000000
+                    ? (amt / 1000000) + "jt"
+                    : (amt / 1000) + "k";
+            btn.setText(label);
+            btn.setCornerRadius(8);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMarginEnd(dpToPx(4));
+            btn.setLayoutParams(lp);
+            btn.setOnClickListener(v -> inputUang.setText(String.valueOf(amt)));
+            quickRow.addView(btn);
+        }
 
         inputUang.addTextChangedListener(new TextWatcher() {
             private String current = "";
@@ -204,33 +347,40 @@ public class PaymentActivity extends AppCompatActivity {
         });
 
         layout.addView(btnUangPas);
+        layout.addView(quickRow);
         layout.addView(inputUang);
 
-        new AlertDialog.Builder(this)
-            .setTitle("Pembayaran Tunai")
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle("Pembayaran Tunai — " + CurrencyFormatter.formatRupiah(totalAkhir))
             .setView(layout)
-            .setPositiveButton("Bayar", (d, w) -> {
-                Editable e = inputUang.getText();
-                String clean = (e != null ? e.toString() : "").replaceAll("[.,\\s]", "");
-                if (clean.isEmpty()) {
-                    Toast.makeText(this, "Masukkan nominal uang!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                double bayar = Double.parseDouble(clean);
-                if (bayar < totalAkhir) {
-                    Toast.makeText(this,
-                        "Uang kurang " + CurrencyFormatter.formatRupiah(totalAkhir - bayar),
-                        Toast.LENGTH_SHORT).show();
-                } else {
-                    double kembalian = bayar - totalAkhir;
-                    String kasirName0 = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
-                    long transId = dbHelper.insertTransaksiDanKurangiStok(totalAkhir, "Tunai", detailTransaksi, kasirName0, cartItems);
-                    updatePoinPelanggan();
-                    tampilkanStruk(transId, "Tunai", bayar, kembalian);
-                }
-            })
+            .setPositiveButton("Bayar", null)
             .setNegativeButton("Batal", null)
-            .show();
+            .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            Editable e = inputUang.getText();
+            String clean = (e != null ? e.toString() : "").replaceAll("[.,\\s]", "");
+            if (clean.isEmpty()) {
+                Toast.makeText(this, "Masukkan nominal uang!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            double bayar = Double.parseDouble(clean);
+            if (bayar < totalAkhir) {
+                Toast.makeText(this,
+                    "Uang kurang " + CurrencyFormatter.formatRupiah(totalAkhir - bayar),
+                    Toast.LENGTH_SHORT).show();
+            } else {
+                double kembalian = bayar - totalAkhir;
+                long transId = dbHelper.insertTransaksiDanKurangiStokFull(
+                        totalAkhir, "Tunai", detailTransaksi, kasirName(),
+                        "LUNAS", pelangganId(), cartItems);
+                updatePoinPelanggan();
+                markVoucherUsed();
+                dialog.dismiss();
+                tampilkanStruk(transId, "Tunai", bayar, kembalian, "LUNAS");
+            }
+        }));
+        dialog.show();
     }
 
     private void dialogDebit() {
@@ -239,7 +389,6 @@ public class PaymentActivity extends AppCompatActivity {
         ((TextView) view.findViewById(R.id.tvTotalKartu))
                 .setText(CurrencyFormatter.formatRupiah(totalAkhir));
 
-        // Setup chip jenis kartu
         ChipGroup chipGroup = view.findViewById(R.id.chipGroupJenisKartu);
         String[] jenisKartu = {"Visa", "Mastercard", "GPN", "BCA", "Mandiri", "BRI", "BNI", "Lainnya"};
         for (int i = 0; i < jenisKartu.length; i++) {
@@ -249,7 +398,6 @@ public class PaymentActivity extends AppCompatActivity {
             chipGroup.addView(chip);
         }
 
-        // Format nomor kartu: XXXX XXXX XXXX XXXX
         TextInputEditText etNomor = view.findViewById(R.id.etNomorKartu);
         etNomor.addTextChangedListener(new TextWatcher() {
             private String current = "";
@@ -272,7 +420,6 @@ public class PaymentActivity extends AppCompatActivity {
             }
         });
 
-        // Format masa berlaku: MM/YY
         TextInputEditText etExpiry = view.findViewById(R.id.etMasaBerlaku);
         etExpiry.addTextChangedListener(new TextWatcher() {
             private String current = "";
@@ -332,11 +479,13 @@ public class PaymentActivity extends AppCompatActivity {
             }
 
             String metode = "Debit/Kredit - " + jenisKartuPilihan;
-            String kasirName = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
-            long transId = dbHelper.insertTransaksiDanKurangiStok(totalAkhir, metode, detailTransaksi, kasirName, cartItems);
+            long transId = dbHelper.insertTransaksiDanKurangiStokFull(
+                    totalAkhir, metode, detailTransaksi, kasirName(),
+                    "LUNAS", pelangganId(), cartItems);
             updatePoinPelanggan();
+            markVoucherUsed();
             dialog.dismiss();
-            tampilkanStruk(transId, metode, 0, 0);
+            tampilkanStruk(transId, metode, 0, 0, "LUNAS");
         }));
 
         dialog.show();
@@ -357,11 +506,131 @@ public class PaymentActivity extends AppCompatActivity {
             .show();
     }
 
+    private void dialogSplitPayment() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 20, 50, 20);
+
+        TextView tvInfo = new TextView(this);
+        tvInfo.setText("Total: " + CurrencyFormatter.formatRupiah(totalAkhir)
+                + "\nMasukkan jumlah yang dibayar tunai:");
+        tvInfo.setTextColor(Color.parseColor("#424242"));
+        tvInfo.setTextSize(14f);
+        LinearLayout.LayoutParams tvLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        tvLp.bottomMargin = dpToPx(12);
+        tvInfo.setLayoutParams(tvLp);
+
+        final TextInputEditText etTunai = new TextInputEditText(this);
+        etTunai.setInputType(InputType.TYPE_CLASS_PHONE);
+        etTunai.setHint("Nominal tunai (Rp)");
+
+        final TextView tvSisa = new TextView(this);
+        tvSisa.setText("Sisa via QRIS: Rp 0");
+        tvSisa.setTextColor(Color.parseColor("#1565C0"));
+        tvSisa.setTextSize(14f);
+        LinearLayout.LayoutParams sisaLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sisaLp.topMargin = dpToPx(8);
+        tvSisa.setLayoutParams(sisaLp);
+
+        etTunai.addTextChangedListener(new TextWatcher() {
+            private String current = "";
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s.toString().equals(current)) return;
+                etTunai.removeTextChangedListener(this);
+                String clean = s.toString().replaceAll("[.,\\s]", "");
+                String formatted = "";
+                if (!clean.isEmpty()) {
+                    DecimalFormat fmt = new DecimalFormat("#,###");
+                    DecimalFormatSymbols sym = new DecimalFormatSymbols();
+                    sym.setGroupingSeparator('.');
+                    fmt.setDecimalFormatSymbols(sym);
+                    formatted = fmt.format(Long.parseLong(clean));
+                    double tunai = Double.parseDouble(clean);
+                    double sisa = totalAkhir - tunai;
+                    tvSisa.setText("Sisa via QRIS: " + CurrencyFormatter.formatRupiah(Math.max(0, sisa)));
+                } else {
+                    tvSisa.setText("Sisa via QRIS: Rp 0");
+                }
+                current = formatted;
+                etTunai.setText(formatted);
+                etTunai.setSelection(formatted.length());
+                etTunai.addTextChangedListener(this);
+            }
+        });
+
+        layout.addView(tvInfo);
+        layout.addView(etTunai);
+        layout.addView(tvSisa);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle("Split Payment")
+            .setView(layout)
+            .setPositiveButton("Konfirmasi", null)
+            .setNegativeButton("Batal", null)
+            .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String cleanTunai = etTunai.getText() != null
+                    ? etTunai.getText().toString().replaceAll("[.,\\s]", "") : "";
+            if (cleanTunai.isEmpty()) {
+                Toast.makeText(this, "Masukkan nominal tunai", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            double tunaiAmt = Double.parseDouble(cleanTunai);
+            if (tunaiAmt <= 0 || tunaiAmt >= totalAkhir) {
+                Toast.makeText(this,
+                        "Nominal tunai harus antara Rp 1 dan " + CurrencyFormatter.formatRupiah(totalAkhir),
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            double qrisAmt = totalAkhir - tunaiAmt;
+            String metode = "Split — Tunai: " + CurrencyFormatter.formatRupiah(tunaiAmt)
+                    + " + QRIS: " + CurrencyFormatter.formatRupiah(qrisAmt);
+            long transId = dbHelper.insertTransaksiDanKurangiStokFull(
+                    totalAkhir, metode, detailTransaksi, kasirName(),
+                    "LUNAS", pelangganId(), cartItems);
+            updatePoinPelanggan();
+            markVoucherUsed();
+            dialog.dismiss();
+            tampilkanStruk(transId, metode, tunaiAmt, 0, "LUNAS");
+        }));
+
+        dialog.show();
+    }
+
+    private void dialogHutang() {
+        if (pelanggan == null) {
+            Toast.makeText(this,
+                    "Pilih pelanggan terlebih dahulu untuk mencatat hutang",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Bayar Nanti (Hutang)")
+            .setMessage("Catat transaksi Rp " + CurrencyFormatter.formatRupiah(totalAkhir)
+                    + " sebagai hutang atas nama " + pelanggan.getNama()
+                    + "?\n\nStok akan langsung dikurangi. Admin dapat menandai lunas nanti.")
+            .setPositiveButton("Catat Hutang", (d, w) -> {
+                long transId = dbHelper.insertTransaksiDanKurangiStokFull(
+                        totalAkhir, "Hutang", detailTransaksi, kasirName(),
+                        "HUTANG", pelangganId(), cartItems);
+                tampilkanStruk(transId, "Hutang", 0, 0, "HUTANG");
+            })
+            .setNegativeButton("Batal", null)
+            .show();
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  Struk (receipt) bottom sheet
     // ──────────────────────────────────────────────────────────────
 
-    private void tampilkanStruk(long transId, String metode, double bayar, double kembalian) {
+    private void tampilkanStruk(long transId, String metode, double bayar, double kembalian, String status) {
         BottomSheetDialog sheet = new BottomSheetDialog(this);
         View root = getLayoutInflater().inflate(R.layout.layout_struk, null);
         sheet.setContentView(root);
@@ -369,32 +638,27 @@ public class PaymentActivity extends AppCompatActivity {
 
         String tanggal = new SimpleDateFormat("dd MMM yyyy, HH:mm:ss", new Locale("id", "ID"))
                 .format(new Date());
-        String kasirName = getSharedPreferences("ButikSession", MODE_PRIVATE)
-                .getString("namaKasir", "Kasir");
+        String kasirN = kasirName();
 
-        populateStrukView(root, transId, tanggal, kasirName, metode, bayar, kembalian);
+        populateStrukView(root, transId, tanggal, kasirN, metode, bayar, kembalian, status);
 
-        // Print button
         root.findViewById(R.id.strukBtnPrint).setOnClickListener(v -> {
-            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirName, metode, bayar, kembalian);
+            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirN, metode, bayar, kembalian, status);
             PrintUtils.printBitmap(PaymentActivity.this, bmp, "Struk_" + transId);
         });
 
-        // WhatsApp direct share
         root.findViewById(R.id.strukBtnWhatsapp).setOnClickListener(v -> {
-            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirName, metode, bayar, kembalian);
-            shareViaWhatsApp(bmp, transId, metode, bayar, kembalian);
+            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirN, metode, bayar, kembalian, status);
+            shareViaWhatsApp(bmp, transId, metode, bayar, kembalian, status);
         });
 
-        // Share button
         root.findViewById(R.id.strukBtnShare).setOnClickListener(v -> {
-            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirName, metode, bayar, kembalian);
+            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirN, metode, bayar, kembalian, status);
             shareReceiptBitmap(bmp, transId);
         });
 
-        // Simpan PDF button
         root.findViewById(R.id.strukBtnCetak).setOnClickListener(v -> {
-            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirName, metode, bayar, kembalian);
+            Bitmap bmp = buildReceiptBitmap(transId, tanggal, kasirN, metode, bayar, kembalian, status);
             saveReceiptPdf(bmp, transId);
         });
 
@@ -408,24 +672,76 @@ public class PaymentActivity extends AppCompatActivity {
     }
 
     // ──────────────────────────────────────────────────────────────
-    //  Populate receipt view with all data
+    //  Format ID transaksi: TRX-YYYYMMDD-XXXX
+    // ──────────────────────────────────────────────────────────────
+
+    private String formatTransId(long transId) {
+        if (transId <= 0) return "—";
+        String date = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        return String.format("TRX-%s-%04d", date, transId);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Populate receipt view
     // ──────────────────────────────────────────────────────────────
 
     private void populateStrukView(View root, long transId, String tanggal,
-                                   String kasirName, String metode,
-                                   double bayar, double kembalian) {
-        ((TextView) root.findViewById(R.id.strukTvId)).setText("#" + (transId > 0 ? transId : "—"));
+                                   String kasirN, String metode,
+                                   double bayar, double kembalian, String status) {
+        // Store header dari DB
+        TextView tvNamaToko = root.findViewById(R.id.strukTvNamaToko);
+        if (tvNamaToko != null) tvNamaToko.setText(namaToko);
+        TextView tvWA = root.findViewById(R.id.strukTvNomorWA);
+        if (tvWA != null) tvWA.setText("WA: " + nomorWa);
+        TextView tvTagline = root.findViewById(R.id.strukTvTagline);
+        if (tvTagline != null) tvTagline.setText(tagline);
+
+        ((TextView) root.findViewById(R.id.strukTvId)).setText(formatTransId(transId));
         ((TextView) root.findViewById(R.id.strukTvTanggal)).setText(tanggal);
-        ((TextView) root.findViewById(R.id.strukTvKasir)).setText(kasirName);
+        ((TextView) root.findViewById(R.id.strukTvKasir)).setText(kasirN);
         ((TextView) root.findViewById(R.id.strukTvMetode)).setText(metode);
         ((TextView) root.findViewById(R.id.strukTvTotal)).setText(CurrencyFormatter.formatRupiah(totalAkhir));
+
+        // Status HUTANG badge
+        View statusBadge = root.findViewById(R.id.strukTvStatusHutang);
+        if (statusBadge != null) {
+            statusBadge.setVisibility("HUTANG".equals(status) ? View.VISIBLE : View.GONE);
+        }
 
         if (pelanggan != null) {
             root.findViewById(R.id.strukLayoutPelanggan).setVisibility(View.VISIBLE);
             ((TextView) root.findViewById(R.id.strukTvPelanggan)).setText(pelanggan.getNama());
         }
 
-        if (metode.equals("Tunai")) {
+        // Diskon rows
+        boolean adaDiskon = diskonPoin > 0 || diskonVoucher > 0;
+        View layoutSubtotal = root.findViewById(R.id.strukLayoutSubtotal);
+        View layoutDiskonPoin = root.findViewById(R.id.strukLayoutDiskonPoin);
+        View layoutDiskonVoucher = root.findViewById(R.id.strukLayoutDiskonVoucher);
+
+        if (layoutSubtotal != null) layoutSubtotal.setVisibility(adaDiskon ? View.VISIBLE : View.GONE);
+        if (adaDiskon && layoutSubtotal != null) {
+            ((TextView) root.findViewById(R.id.strukTvSubtotal))
+                    .setText(CurrencyFormatter.formatRupiah(totalBelanja));
+        }
+
+        if (layoutDiskonPoin != null) {
+            layoutDiskonPoin.setVisibility(diskonPoin > 0 ? View.VISIBLE : View.GONE);
+            if (diskonPoin > 0) {
+                ((TextView) root.findViewById(R.id.strukTvDiskonPoin))
+                        .setText("-" + CurrencyFormatter.formatRupiah(diskonPoin));
+            }
+        }
+
+        if (layoutDiskonVoucher != null) {
+            layoutDiskonVoucher.setVisibility(diskonVoucher > 0 ? View.VISIBLE : View.GONE);
+            if (diskonVoucher > 0) {
+                ((TextView) root.findViewById(R.id.strukTvDiskonVoucher))
+                        .setText("-" + CurrencyFormatter.formatRupiah(diskonVoucher));
+            }
+        }
+
+        if (metode.equals("Tunai") && bayar > 0) {
             root.findViewById(R.id.strukLayoutBayar).setVisibility(View.VISIBLE);
             root.findViewById(R.id.strukLayoutKembalian).setVisibility(View.VISIBLE);
             ((TextView) root.findViewById(R.id.strukTvBayar)).setText(CurrencyFormatter.formatRupiah(bayar));
@@ -447,14 +763,12 @@ public class PaymentActivity extends AppCompatActivity {
         rowParams.bottomMargin = dpToPx(10);
         row.setLayoutParams(rowParams);
 
-        // Item name
         TextView tvNama = new TextView(this);
         tvNama.setText(item.getBarang().getNamaBarang());
         tvNama.setTextColor(Color.parseColor("#212121"));
         tvNama.setTextSize(13f);
         tvNama.setTypeface(null, android.graphics.Typeface.BOLD);
 
-        // Size + qty + price
         TextView tvDetail = new TextView(this);
         String detail = "Size " + item.getUkuran()
                 + "  ×  " + item.getQuantity() + " pcs"
@@ -463,7 +777,6 @@ public class PaymentActivity extends AppCompatActivity {
         tvDetail.setTextColor(Color.parseColor("#757575"));
         tvDetail.setTextSize(12f);
 
-        // Subtotal
         LinearLayout subtotalRow = new LinearLayout(this);
         subtotalRow.setOrientation(LinearLayout.HORIZONTAL);
 
@@ -492,11 +805,11 @@ public class PaymentActivity extends AppCompatActivity {
     //  Bitmap generation for share / print
     // ──────────────────────────────────────────────────────────────
 
-    private Bitmap buildReceiptBitmap(long transId, String tanggal, String kasirName,
-                                      String metode, double bayar, double kembalian) {
+    private Bitmap buildReceiptBitmap(long transId, String tanggal, String kasirN,
+                                      String metode, double bayar, double kembalian, String status) {
         LayoutInflater inflater = LayoutInflater.from(this);
         View printView = inflater.inflate(R.layout.layout_struk_content, null);
-        populateStrukView(printView, transId, tanggal, kasirName, metode, bayar, kembalian);
+        populateStrukView(printView, transId, tanggal, kasirN, metode, bayar, kembalian, status);
 
         int widthPx = dpToPx(360);
         printView.measure(
@@ -542,7 +855,7 @@ public class PaymentActivity extends AppCompatActivity {
     // ──────────────────────────────────────────────────────────────
 
     private void shareViaWhatsApp(Bitmap bmp, long transId, String metode,
-                                   double bayar, double kembalian) {
+                                   double bayar, double kembalian, String status) {
         try {
             File dir = new File(getCacheDir(), "struk");
             //noinspection ResultOfMethodCallIgnored
@@ -556,7 +869,7 @@ public class PaymentActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("image/*");
             intent.putExtra(Intent.EXTRA_STREAM, uri);
-            intent.putExtra(Intent.EXTRA_TEXT, buildWhatsAppText(transId, metode, bayar, kembalian));
+            intent.putExtra(Intent.EXTRA_TEXT, buildWhatsAppText(transId, metode, bayar, kembalian, status));
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             intent.setPackage("com.whatsapp");
             try {
@@ -574,43 +887,40 @@ public class PaymentActivity extends AppCompatActivity {
         }
     }
 
-    private String buildWhatsAppText(long transId, String metode, double bayar, double kembalian) {
-        String kasirName = getSharedPreferences("ButikSession", MODE_PRIVATE)
-                .getString("namaKasir", "Kasir");
+    private String buildWhatsAppText(long transId, String metode, double bayar, double kembalian, String status) {
         String tanggal = new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID"))
                 .format(new Date());
         StringBuilder sb = new StringBuilder();
-        sb.append("*" + NAMA_TOKO + "*\n");
-        sb.append("Struk #").append(transId).append("\n\n");
+        sb.append("*").append(namaToko).append("*\n");
+        sb.append(formatTransId(transId)).append("\n\n");
         sb.append("Tanggal : ").append(tanggal).append("\n");
-        sb.append("Kasir   : ").append(kasirName).append("\n");
-        if (pelanggan != null) {
-            sb.append("Pelanggan : ").append(pelanggan.getNama()).append("\n");
-        }
-        sb.append("\n");
-        sb.append("*Item Belanja:*\n");
+        sb.append("Kasir   : ").append(kasirName()).append("\n");
+        if (pelanggan != null) sb.append("Pelanggan : ").append(pelanggan.getNama()).append("\n");
+        sb.append("\n*Item Belanja:*\n");
         for (CartItem item : cartItems) {
             sb.append("• ").append(item.getBarang().getNamaBarang())
               .append(" (").append(item.getUkuran()).append(")")
               .append(" × ").append(item.getQuantity())
               .append(" = ").append(CurrencyFormatter.formatRupiah(item.getSubtotal())).append("\n");
         }
-        if (diskonPoin > 0) {
-            sb.append("\nSubtotal : ").append(CurrencyFormatter.formatRupiah(totalBelanja)).append("\n");
-            sb.append("Diskon Poin : -").append(CurrencyFormatter.formatRupiah(diskonPoin)).append("\n");
-        }
+        if (diskonPoin > 0) sb.append("\nSubtotal : ").append(CurrencyFormatter.formatRupiah(totalBelanja)).append("\n")
+                .append("Diskon Poin : -").append(CurrencyFormatter.formatRupiah(diskonPoin)).append("\n");
+        if (diskonVoucher > 0) sb.append("Diskon Voucher (").append(kodeVoucher).append("): -")
+                .append(CurrencyFormatter.formatRupiah(diskonVoucher)).append("\n");
         sb.append("\n*Total  : ").append(CurrencyFormatter.formatRupiah(totalAkhir)).append("*\n");
         sb.append("Metode  : ").append(metode).append("\n");
-        if (metode.equals("Tunai")) {
+        if (metode.equals("Tunai") && bayar > 0) {
             sb.append("Bayar   : ").append(CurrencyFormatter.formatRupiah(bayar)).append("\n");
             sb.append("Kembali : ").append(CurrencyFormatter.formatRupiah(kembalian)).append("\n");
         }
-        sb.append("\nTerima kasih telah berbelanja!");
+        if ("HUTANG".equals(status)) sb.append("\n⚠ STATUS: BELUM LUNAS\n");
+        sb.append("\n").append(tagline);
+        sb.append("\nWA: ").append(nomorWa);
         return sb.toString();
     }
 
     // ──────────────────────────────────────────────────────────────
-    //  Save receipt as PDF to device Downloads
+    //  Save receipt as PDF
     // ──────────────────────────────────────────────────────────────
 
     private void saveReceiptPdf(Bitmap bmp, long transId) {
@@ -638,19 +948,17 @@ public class PaymentActivity extends AppCompatActivity {
     }
 
     // ──────────────────────────────────────────────────────────────
-    //  Plain-text receipt (sent alongside the image when sharing)
+    //  Plain-text receipt
     // ──────────────────────────────────────────────────────────────
 
     private String buildTextReceipt(long transId) {
         StringBuilder sb = new StringBuilder();
-        sb.append("====== " + NAMA_TOKO + " ======\n");
-        sb.append("No. Transaksi : #").append(transId).append("\n");
+        sb.append("====== ").append(namaToko).append(" ======\n");
+        sb.append("No. Transaksi : ").append(formatTransId(transId)).append("\n");
         sb.append("Tanggal       : ")
           .append(new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID")).format(new Date()))
           .append("\n");
-        if (pelanggan != null) {
-            sb.append("Pelanggan     : ").append(pelanggan.getNama()).append("\n");
-        }
+        if (pelanggan != null) sb.append("Pelanggan     : ").append(pelanggan.getNama()).append("\n");
         sb.append("─────────────────────────\n");
         for (CartItem item : cartItems) {
             sb.append(item.getBarang().getNamaBarang())
@@ -660,13 +968,12 @@ public class PaymentActivity extends AppCompatActivity {
               .append(" = ").append(CurrencyFormatter.formatRupiah(item.getSubtotal())).append("\n");
         }
         sb.append("─────────────────────────\n");
-        if (diskonPoin > 0) {
-            sb.append("Subtotal      : ").append(CurrencyFormatter.formatRupiah(totalBelanja)).append("\n");
-            sb.append("Diskon Poin   : -").append(CurrencyFormatter.formatRupiah(diskonPoin)).append("\n");
-        }
+        if (diskonPoin > 0) sb.append("Subtotal      : ").append(CurrencyFormatter.formatRupiah(totalBelanja)).append("\n")
+                .append("Diskon Poin   : -").append(CurrencyFormatter.formatRupiah(diskonPoin)).append("\n");
+        if (diskonVoucher > 0) sb.append("Diskon Voucher: -").append(CurrencyFormatter.formatRupiah(diskonVoucher)).append("\n");
         sb.append("Total         : ").append(CurrencyFormatter.formatRupiah(totalAkhir)).append("\n");
         sb.append("=========================\n");
-        sb.append("Terima kasih telah berbelanja!");
+        sb.append(tagline);
         return sb.toString();
     }
 
@@ -679,6 +986,7 @@ public class PaymentActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 200 && resultCode == RESULT_OK) {
             updatePoinPelanggan();
+            markVoucherUsed();
             setResult(RESULT_OK);
             finish();
         }
