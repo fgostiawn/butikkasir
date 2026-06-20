@@ -54,6 +54,7 @@ public class QrisActivity extends AppCompatActivity {
         totalBelanja = getIntent().getDoubleExtra("TOTAL_BELANJA", 0);
         detailTransaksi = getIntent().getStringExtra("DETAIL_TRANSAKSI");
         if (detailTransaksi == null) detailTransaksi = "";
+        boolean isSplit = getIntent().getBooleanExtra("IS_SPLIT", false);
 
         //noinspection unchecked
         cartItems = (List<CartItem>) getIntent().getSerializableExtra("CART_ITEMS");
@@ -70,7 +71,7 @@ public class QrisActivity extends AppCompatActivity {
         TextView tvTimer   = findViewById(R.id.qrisTvTimer);
         ImageView imgBarcode = findViewById(R.id.qrisImgBarcode);
 
-        tvEwallet.setText(eWalletName);
+        tvEwallet.setText(isSplit ? "QRIS (Sisa Split Payment)" : eWalletName);
         tvTotal.setText(CurrencyFormatter.formatRupiah(totalBelanja));
 
         try {
@@ -95,6 +96,12 @@ public class QrisActivity extends AppCompatActivity {
 
         findViewById(R.id.qrisBtnKonfirmasi).setOnClickListener(v -> {
             countDownTimer.cancel();
+            if (isSplit) {
+                // Biarkan PaymentActivity yang simpan transaksi
+                setResult(RESULT_OK);
+                finish();
+                return;
+            }
             String metode = "QRIS (" + eWalletName + ")";
             String kasirQ = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
             long transId = dbHelper.insertTransaksiDanKurangiStok(totalBelanja, metode, detailTransaksi, kasirQ, cartItems);

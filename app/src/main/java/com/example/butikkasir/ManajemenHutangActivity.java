@@ -111,7 +111,8 @@ public class ManajemenHutangActivity extends AppCompatActivity {
                         boolean ok = dbHelper.lunasiHutang(item.id);
                         if (ok) {
                             Toast.makeText(ManajemenHutangActivity.this,
-                                    "Hutang ditandai lunas", Toast.LENGTH_SHORT).show();
+                                    "Hutang dilunasi & poin pelanggan dikreditkan",
+                                    Toast.LENGTH_SHORT).show();
                             loadData();
                         }
                     })

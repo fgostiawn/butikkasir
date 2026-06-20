@@ -4,8 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginVertical="5dp"
+    android:clickable="true"
+    android:focusable="true"
     app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
+    app:rippleColor="?attr/colorControlHighlight"
     app:strokeColor="@color/dividerColor"
     app:strokeWidth="1dp">
 

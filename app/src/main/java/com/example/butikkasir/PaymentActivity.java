@@ -63,6 +63,10 @@ public class PaymentActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private Pelanggan pelanggan = null;
 
+    // split payment state
+    private double splitTunaiAmt = 0;
+    private double splitQrisAmt = 0;
+
     private String namaToko;
     private String nomorWa;
     private String tagline;
@@ -588,16 +592,18 @@ public class PaymentActivity extends AppCompatActivity {
                         Toast.LENGTH_SHORT).show();
                 return;
             }
-            double qrisAmt = totalAkhir - tunaiAmt;
-            String metode = "Split — Tunai: " + CurrencyFormatter.formatRupiah(tunaiAmt)
-                    + " + QRIS: " + CurrencyFormatter.formatRupiah(qrisAmt);
-            long transId = dbHelper.insertTransaksiDanKurangiStokFull(
-                    totalAkhir, metode, detailTransaksi, kasirName(),
-                    "LUNAS", pelangganId(), cartItems);
-            updatePoinPelanggan();
-            markVoucherUsed();
+            splitTunaiAmt = tunaiAmt;
+            splitQrisAmt = totalAkhir - tunaiAmt;
             dialog.dismiss();
-            tampilkanStruk(transId, metode, tunaiAmt, 0, "LUNAS");
+
+            // Buka halaman QRIS untuk membayar sisa
+            Intent intent = new Intent(this, QrisActivity.class);
+            intent.putExtra("IS_SPLIT", true);
+            intent.putExtra("EWALLET", "QRIS");
+            intent.putExtra("TOTAL_BELANJA", splitQrisAmt);
+            intent.putExtra("DETAIL_TRANSAKSI", detailTransaksi);
+            intent.putExtra("CART_ITEMS", new ArrayList<>(cartItems));
+            startActivityForResult(intent, 201);
         }));
 
         dialog.show();
@@ -985,10 +991,21 @@ public class PaymentActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 200 && resultCode == RESULT_OK) {
+            // QRIS normal
             updatePoinPelanggan();
             markVoucherUsed();
             setResult(RESULT_OK);
             finish();
+        } else if (requestCode == 201 && resultCode == RESULT_OK) {
+            // Split payment: QRIS selesai, simpan transaksi sekarang
+            String metode = "Split — Tunai: " + CurrencyFormatter.formatRupiah(splitTunaiAmt)
+                    + " + QRIS: " + CurrencyFormatter.formatRupiah(splitQrisAmt);
+            long transId = dbHelper.insertTransaksiDanKurangiStokFull(
+                    totalAkhir, metode, detailTransaksi, kasirName(),
+                    "LUNAS", pelangganId(), cartItems);
+            updatePoinPelanggan();
+            markVoucherUsed();
+            tampilkanStruk(transId, metode, splitTunaiAmt, 0, "LUNAS");
         }
     }
 }

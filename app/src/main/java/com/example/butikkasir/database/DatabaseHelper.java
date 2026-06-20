@@ -638,11 +638,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public boolean lunasiHutang(int idTransaksi) {
+        SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("status_transaksi", "LUNAS");
-        return this.getWritableDatabase()
-                .update(TABLE_TRANSAKSI, cv, "id_transaksi = ?",
-                        new String[]{String.valueOf(idTransaksi)}) > 0;
+        boolean ok = db.update(TABLE_TRANSAKSI, cv, "id_transaksi = ?",
+                new String[]{String.valueOf(idTransaksi)}) > 0;
+        if (ok) {
+            // Kredit poin pelanggan setelah hutang dilunasi
+            android.database.Cursor c = db.rawQuery(
+                    "SELECT id_pelanggan_trx, total_belanja FROM " + TABLE_TRANSAKSI
+                    + " WHERE id_transaksi = ?", new String[]{String.valueOf(idTransaksi)});
+            if (c != null && c.moveToFirst()) {
+                int idPelanggan = c.getInt(0);
+                double total = c.getDouble(1);
+                c.close();
+                if (idPelanggan > 0) {
+                    int poinDiperoleh = (int) (total / 10000);
+                    db.execSQL("UPDATE " + TABLE_PELANGGAN
+                            + " SET " + KEY_POIN + " = " + KEY_POIN + " + ?"
+                            + " WHERE " + KEY_ID_PELANGGAN + " = ?",
+                            new Object[]{poinDiperoleh, idPelanggan});
+                }
+            } else if (c != null) c.close();
+        }
+        return ok;
     }
 
     // --- RIWAYAT KASIR HARI INI ---
