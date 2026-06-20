@@ -2,14 +2,11 @@ package com.example.butikkasir;
 
 import android.database.Cursor;
 import android.os.Bundle;
-import android.text.InputType;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,8 +19,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.butikkasir.database.DatabaseHelper;
 import com.example.butikkasir.utils.CurrencyFormatter;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,77 +81,149 @@ public class ManajemenVoucherActivity extends AppCompatActivity {
     }
 
     private void showDialogTambah() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 20, 50, 20);
+        BottomSheetDialog sheet = new BottomSheetDialog(this);
+        View root = getLayoutInflater().inflate(R.layout.layout_tambah_voucher, null);
+        sheet.setContentView(root);
 
-        EditText etKode = new EditText(this);
-        etKode.setHint("Kode Voucher (cth: DISKON10)");
-        etKode.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        ChipGroup cgJenis   = root.findViewById(R.id.chipGroupJenis);
+        ChipGroup cgPersen  = root.findViewById(R.id.chipGroupPersen);
+        ChipGroup cgNominal = root.findViewById(R.id.chipGroupNominal);
+        ChipGroup cgMin     = root.findViewById(R.id.chipGroupMin);
+        ChipGroup cgMaks    = root.findViewById(R.id.chipGroupMaks);
+        View layoutPersen   = root.findViewById(R.id.layoutPresetPersen);
+        View layoutNominal  = root.findViewById(R.id.layoutPresetNominal);
+        TextInputEditText etNilai = root.findViewById(R.id.etNilai);
+        TextInputEditText etKode  = root.findViewById(R.id.etKode);
+        MaterialButton btnAuto    = root.findViewById(R.id.btnAutoKode);
+        MaterialButton btnSimpan  = root.findViewById(R.id.btnSimpanVoucher);
 
-        RadioGroup rgJenis = new RadioGroup(this);
-        rgJenis.setOrientation(RadioGroup.HORIZONTAL);
-        RadioButton rbPersen = new RadioButton(this);
-        rbPersen.setText("Persen (%)");
-        rbPersen.setId(View.generateViewId());
-        RadioButton rbNominal = new RadioButton(this);
-        rbNominal.setText("Nominal (Rp)");
-        rbNominal.setId(View.generateViewId());
-        rbPersen.setChecked(true);
-        rgJenis.addView(rbPersen);
-        rgJenis.addView(rbNominal);
+        // helper: apakah jenis persen?
+        Runnable[] updateJenisUI = {null};
+        updateJenisUI[0] = () -> {
+            boolean isPersen = ((Chip) root.findViewById(R.id.chipPersen)).isChecked();
+            layoutPersen.setVisibility(isPersen ? View.VISIBLE : View.GONE);
+            layoutNominal.setVisibility(isPersen ? View.GONE : View.VISIBLE);
+            etNilai.setText("");
+            cgPersen.clearCheck();
+            cgNominal.clearCheck();
+            autoUpdateKode(root, etKode);
+        };
 
-        EditText etNilai   = new EditText(this); etNilai.setHint("Nilai (mis: 10 untuk 10% atau 20000 untuk Rp 20.000)");
-        etNilai.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText etMin     = new EditText(this); etMin.setHint("Min. belanja (0 = tanpa syarat)");
-        etMin.setInputType(InputType.TYPE_CLASS_NUMBER);
-        EditText etMaxPakai = new EditText(this); etMaxPakai.setHint("Maks penggunaan (0 = tak terbatas)");
-        etMaxPakai.setInputType(InputType.TYPE_CLASS_NUMBER);
+        cgJenis.setOnCheckedStateChangeListener((group, ids) -> updateJenisUI[0].run());
 
-        layout.addView(etKode);
-        layout.addView(rgJenis);
-        layout.addView(etNilai);
-        layout.addView(etMin);
-        layout.addView(etMaxPakai);
+        // preset persen → isi etNilai + auto kode
+        cgPersen.setOnCheckedStateChangeListener((group, ids) -> {
+            if (ids.isEmpty()) return;
+            Chip chip = root.findViewById(ids.get(0));
+            if (chip == null) return;
+            String label = chip.getText().toString().replace("%", "").trim();
+            etNilai.setText(label);
+            autoUpdateKode(root, etKode);
+        });
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Tambah Voucher")
-                .setView(layout)
-                .setPositiveButton("Simpan", null)
-                .setNegativeButton("Batal", null)
-                .create();
+        // preset nominal → isi etNilai + auto kode
+        cgNominal.setOnCheckedStateChangeListener((group, ids) -> {
+            if (ids.isEmpty()) return;
+            Chip chip = root.findViewById(ids.get(0));
+            if (chip == null) return;
+            String label = chip.getText().toString()
+                    .replace("Rp ", "").replace(".", "").replace(",", "").trim();
+            etNilai.setText(label);
+            autoUpdateKode(root, etKode);
+        });
 
-        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String kode = etKode.getText().toString().trim().toUpperCase();
-            String nilaiStr = etNilai.getText().toString().trim();
-            String minStr   = etMin.getText().toString().trim();
-            String maxStr   = etMaxPakai.getText().toString().trim();
+        // manual nilai → auto kode
+        etNilai.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {
+                autoUpdateKode(root, etKode);
+            }
+        });
 
-            if (kode.isEmpty() || nilaiStr.isEmpty()) {
-                Toast.makeText(this, "Kode dan nilai wajib diisi", Toast.LENGTH_SHORT).show();
+        // tombol auto-generate kode
+        btnAuto.setOnClickListener(v -> autoUpdateKode(root, etKode));
+
+        btnSimpan.setOnClickListener(v -> {
+            String kode     = etKode.getText() != null ? etKode.getText().toString().trim().toUpperCase() : "";
+            String nilaiStr = etNilai.getText() != null ? etNilai.getText().toString().trim() : "";
+
+            if (kode.isEmpty()) {
+                Toast.makeText(this, "Kode voucher wajib diisi", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (nilaiStr.isEmpty()) {
+                Toast.makeText(this, "Pilih atau masukkan besar diskon", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            String jenis = rbPersen.isChecked() ? "persen" : "nominal";
-            double nilai = Double.parseDouble(nilaiStr);
-            double min   = minStr.isEmpty() ? 0 : Double.parseDouble(minStr);
-            int maxPakai = maxStr.isEmpty() ? 0 : Integer.parseInt(maxStr);
-
-            if (jenis.equals("persen") && (nilai <= 0 || nilai > 100)) {
-                Toast.makeText(this, "Persen harus antara 1-100", Toast.LENGTH_SHORT).show();
+            boolean isPersen = ((Chip) root.findViewById(R.id.chipPersen)).isChecked();
+            String jenis = isPersen ? "persen" : "nominal";
+            double nilai;
+            try { nilai = Double.parseDouble(nilaiStr); }
+            catch (NumberFormatException e) {
+                Toast.makeText(this, "Nilai tidak valid", Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (isPersen && (nilai <= 0 || nilai > 100)) {
+                Toast.makeText(this, "Persen harus antara 1–100", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!isPersen && nilai <= 0) {
+                Toast.makeText(this, "Nominal harus lebih dari 0", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            double min = resolveMinBelanja(root);
+            int maxPakai = resolveMaksPakai(root);
 
             boolean ok = dbHelper.insertVoucher(kode, jenis, nilai, min, maxPakai);
             if (ok) {
-                Toast.makeText(this, "Voucher ditambahkan", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
+                Toast.makeText(this, "Voucher " + kode + " ditambahkan!", Toast.LENGTH_SHORT).show();
+                sheet.dismiss();
                 loadData();
             } else {
-                Toast.makeText(this, "Kode voucher sudah ada", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Kode " + kode + " sudah dipakai, ganti kode lain", Toast.LENGTH_SHORT).show();
             }
-        }));
-        dialog.show();
+        });
+
+        sheet.show();
+    }
+
+    private void autoUpdateKode(View root, TextInputEditText etKode) {
+        boolean isPersen = ((Chip) root.findViewById(R.id.chipPersen)).isChecked();
+        TextInputEditText etNilai = root.findViewById(R.id.etNilai);
+        String nilaiStr = etNilai.getText() != null ? etNilai.getText().toString().trim() : "";
+        if (nilaiStr.isEmpty()) return;
+        try {
+            double nilai = Double.parseDouble(nilaiStr);
+            String kode;
+            if (isPersen) {
+                kode = "DISKON" + (int) nilai;
+            } else {
+                long rbu = (long) nilai / 1000;
+                kode = "HEMAT" + rbu + "K";
+            }
+            etKode.setText(kode);
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private double resolveMinBelanja(View root) {
+        int checkedId = ((ChipGroup) root.findViewById(R.id.chipGroupMin)).getCheckedChipId();
+        if (checkedId == R.id.chipMin50)  return 50_000;
+        if (checkedId == R.id.chipMin100) return 100_000;
+        if (checkedId == R.id.chipMin200) return 200_000;
+        if (checkedId == R.id.chipMin500) return 500_000;
+        return 0;
+    }
+
+    private int resolveMaksPakai(View root) {
+        int checkedId = ((ChipGroup) root.findViewById(R.id.chipGroupMaks)).getCheckedChipId();
+        if (checkedId == R.id.chipMaks1)  return 1;
+        if (checkedId == R.id.chipMaks5)  return 5;
+        if (checkedId == R.id.chipMaks10) return 10;
+        if (checkedId == R.id.chipMaks20) return 20;
+        return 0; // tak terbatas
     }
 
     // ──────────────────────────────────────────────────────────────

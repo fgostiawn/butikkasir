@@ -102,15 +102,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"
-        android:hint="Harga (Rp)"
+        android:hint="Harga"
         app:boxStrokeColor="@color/colorPrimary"
-        app:hintTextColor="@color/colorPrimary">
+        app:hintTextColor="@color/colorPrimary"
+        app:prefixText="Rp "
+        app:prefixTextColor="@color/textColorSecondary">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etHargaBarangForm"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="numberDecimal" />
+            android:inputType="number" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout

@@ -477,8 +477,8 @@ public class PaymentActivity extends AppCompatActivity {
                 Toast.makeText(this, "Format masa berlaku: MM/YY", Toast.LENGTH_SHORT).show();
                 return;
             }
-            if (cvv.length() < 3) {
-                Toast.makeText(this, "CVV minimal 3 digit", Toast.LENGTH_SHORT).show();
+            if (cvv.length() != 3) {
+                Toast.makeText(this, "CVV harus 3 digit", Toast.LENGTH_SHORT).show();
                 return;
             }
 

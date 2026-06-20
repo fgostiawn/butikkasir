@@ -254,9 +254,40 @@ public class ManajemenBarangActivity extends AppCompatActivity {
                 android.R.layout.simple_dropdown_item_1line, DAFTAR_KATEGORI);
         actvKat.setAdapter(katAdapter);
 
+        // Format ribuan saat ketik harga
+        etHarga.addTextChangedListener(new TextWatcher() {
+            private String current = "";
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s.toString().equals(current)) return;
+                etHarga.removeTextChangedListener(this);
+                String clean = s.toString().replaceAll("[.\\s]", "");
+                if (!clean.isEmpty()) {
+                    java.text.DecimalFormat fmt = new java.text.DecimalFormat("#,###");
+                    java.text.DecimalFormatSymbols sym = new java.text.DecimalFormatSymbols();
+                    sym.setGroupingSeparator('.');
+                    fmt.setDecimalFormatSymbols(sym);
+                    String formatted = fmt.format(Long.parseLong(clean));
+                    current = formatted;
+                    etHarga.setText(formatted);
+                    etHarga.setSelection(formatted.length());
+                } else {
+                    current = "";
+                }
+                etHarga.addTextChangedListener(this);
+            }
+        });
+
         if (existing != null) {
             etNama.setText(existing.nama);
-            etHarga.setText(String.valueOf((long) existing.harga));
+            // Set harga dengan format ribuan
+            java.text.DecimalFormat fmt = new java.text.DecimalFormat("#,###");
+            java.text.DecimalFormatSymbols sym = new java.text.DecimalFormatSymbols();
+            sym.setGroupingSeparator('.');
+            fmt.setDecimalFormatSymbols(sym);
+            etHarga.setText(fmt.format((long) existing.harga));
             etStok.setText(String.valueOf(existing.stok));
             etDetail.setText(existing.detail);
             actvKat.setText(existing.kategori, false);
@@ -286,7 +317,7 @@ public class ManajemenBarangActivity extends AppCompatActivity {
 
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String nama     = etNama.getText().toString().trim();
-            String hargaStr = etHarga.getText().toString().trim();
+            String hargaStr = etHarga.getText().toString().trim().replaceAll("\\.", "");
             String stokStr  = etStok.getText().toString().trim();
             String detail   = etDetail.getText().toString().trim();
             String kategori = actvKat.getText().toString().trim();
