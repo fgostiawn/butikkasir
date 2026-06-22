@@ -44,7 +44,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
         MaterialCardView cardBackup         = findViewById(R.id.cardBackup);
         MaterialCardView cardPengaturanToko = findViewById(R.id.cardPengaturanToko);
         MaterialCardView cardVoucher        = findViewById(R.id.cardVoucherAdmin);
-        MaterialCardView cardHutang         = findViewById(R.id.cardHutangAdmin);
 
         cardLaporan.setOnClickListener(v ->
                 startActivity(new Intent(this, LaporanActivity.class)));
@@ -64,9 +63,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
         cardPengaturanToko.setOnClickListener(v -> showPengaturanToko());
         cardVoucher.setOnClickListener(v ->
                 startActivity(new Intent(this, ManajemenVoucherActivity.class)));
-        cardHutang.setOnClickListener(v ->
-                startActivity(new Intent(this, ManajemenHutangActivity.class)));
-
         findViewById(R.id.btnLogoutAdmin).setOnClickListener(v -> konfirmasiLogout());
     }
 

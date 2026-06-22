@@ -13,10 +13,19 @@ import java.util.List;
 
 public class LaporanAdapter extends RecyclerView.Adapter<LaporanAdapter.LaporanViewHolder> {
 
+    public interface OnItemClickListener {
+        void onItemClick(Transaksi transaksi);
+    }
+
     private List<Transaksi> listTransaksi;
+    private OnItemClickListener listener;
 
     public LaporanAdapter(List<Transaksi> listTransaksi) {
         this.listTransaksi = listTransaksi;
+    }
+
+    public void setOnItemClickListener(OnItemClickListener l) {
+        this.listener = l;
     }
 
     @NonNull
@@ -34,6 +43,9 @@ public class LaporanAdapter extends RecyclerView.Adapter<LaporanAdapter.LaporanV
         holder.tvDetail.setText(t.getDetailBarang());
         holder.tvId.setText("ID Transaksi: #" + t.getIdTransaksi());
         holder.tvTotal.setText(CurrencyFormatter.formatRupiah(t.getTotalBelanja()));
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onItemClick(t);
+        });
     }
 
     @Override

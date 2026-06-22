@@ -6,6 +6,10 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "ButikDB";
@@ -321,6 +325,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(KEY_METODE, metode);
         values.put(KEY_DETAIL, detail);
         values.put(KEY_KASIR_TRX, kasir != null ? kasir : "Kasir");
+        // Gunakan waktu lokal perangkat agar filter tanggal tidak meleset akibat UTC offset
+        values.put(KEY_TANGGAL, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
         return db.insert(TABLE_TRANSAKSI, null, values);
     }
 
@@ -616,6 +622,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(KEY_KASIR_TRX, kasir != null ? kasir : "Kasir");
         cv.put("status_transaksi", status != null ? status : "LUNAS");
         cv.put("id_pelanggan_trx", idPelanggan);
+        cv.put(KEY_TANGGAL, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
         long transId = db.insert(TABLE_TRANSAKSI, null, cv);
         if (transId > 0 && cartItems != null) {
             for (com.example.butikkasir.model.CartItem item : cartItems) {

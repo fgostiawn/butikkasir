@@ -159,7 +159,7 @@ public class RekapLaporanActivity extends AppCompatActivity {
                 break;
             case "week":
                 Calendar ws = Calendar.getInstance();
-                ws.set(Calendar.DAY_OF_WEEK, ws.getFirstDayOfWeek());
+                ws.add(Calendar.DAY_OF_YEAR, -6); // 7 hari ke belakang termasuk hari ini
                 filterFrom = sdf.format(ws.getTime()); filterTo = sdf.format(cal.getTime());
                 btnDariRekap.setText("Dari: " + uiSdf.format(ws.getTime()));
                 btnSampaiRekap.setText("Sampai: " + uiSdf.format(cal.getTime()));
@@ -178,23 +178,25 @@ public class RekapLaporanActivity extends AppCompatActivity {
     // ── Filter ──────────────────────────────────────────────────────
 
     private void showFromPicker() {
-        Calendar cal = Calendar.getInstance();
+        Calendar now = Calendar.getInstance();
         new android.app.DatePickerDialog(this, (view, y, m, d) -> {
-            cal.set(y, m, d);
-            filterFrom = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.getTime());
-            btnDariRekap.setText("Dari: " + fmtShort(cal.getTime()));
+            Calendar picked = Calendar.getInstance();
+            picked.set(y, m, d);
+            filterFrom = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(picked.getTime());
+            btnDariRekap.setText("Dari: " + fmtShort(picked.getTime()));
             loadAll();
-        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show();
+        }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private void showToPicker() {
-        Calendar cal = Calendar.getInstance();
+        Calendar now = Calendar.getInstance();
         new android.app.DatePickerDialog(this, (view, y, m, d) -> {
-            cal.set(y, m, d);
-            filterTo = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.getTime());
-            btnSampaiRekap.setText("Sampai: " + fmtShort(cal.getTime()));
+            Calendar picked = Calendar.getInstance();
+            picked.set(y, m, d);
+            filterTo = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(picked.getTime());
+            btnSampaiRekap.setText("Sampai: " + fmtShort(picked.getTime()));
             loadAll();
-        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show();
+        }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private void resetFilter() {
@@ -218,10 +220,15 @@ public class RekapLaporanActivity extends AppCompatActivity {
 
         Cursor c = dbHelper.getLaporanFiltered(filterFrom, filterTo, filterKasir);
         if (c != null && c.moveToFirst()) {
-            int idxKasirCol = c.getColumnIndex("nama_kasir");
+            int idxKasir  = c.getColumnIndex("nama_kasir");
+            int idxStatus = c.getColumnIndex("status_transaksi");
             do {
-                String kasir = idxKasirCol >= 0 ? c.getString(idxKasirCol) : "Kasir";
-                listTransaksi.add(new Transaksi(c.getInt(0), c.getString(1), c.getDouble(2), c.getString(3), c.getString(4), kasir));
+                String kasir  = idxKasir  >= 0 ? c.getString(idxKasir)  : "Kasir";
+                String status = idxStatus >= 0 ? c.getString(idxStatus) : "LUNAS";
+                if (status == null) status = "LUNAS";
+                listTransaksi.add(new Transaksi(
+                        c.getInt(0), c.getString(1), c.getDouble(2),
+                        c.getString(3), c.getString(4), kasir, status));
                 totalPendapatan += c.getDouble(2); totalCount++;
             } while (c.moveToNext());
             c.close();
@@ -482,6 +489,7 @@ public class RekapLaporanActivity extends AppCompatActivity {
         inner.addView(headerRow); inner.addView(tvMetode); inner.addView(tvKasirLabel);
         inner.addView(divider); inner.addView(itemsLayout);
         card.addView(inner);
+        card.setOnClickListener(v -> showDetail(t));
         return card;
     }
 
@@ -548,32 +556,53 @@ public class RekapLaporanActivity extends AppCompatActivity {
     }
 
     private String buildTextReport() {
+        String namaToko = dbHelper.getPengaturan("nama_toko");
+        if (namaToko == null || namaToko.isEmpty()) namaToko = "BUTIK KASIR";
         String now   = new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID")).format(new Date());
         String kasir = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
         double rata  = totalCount > 0 ? totalPendapatan / totalCount : 0;
 
+        int countLunas = 0, countHutang = 0;
+        double totalLunas = 0;
+        for (Transaksi t : listTransaksi) {
+            if ("HUTANG".equals(t.getStatus())) countHutang++;
+            else { totalLunas += t.getTotalBelanja(); countLunas++; }
+        }
+
         StringBuilder sb = new StringBuilder();
-        sb.append("=====================================\n         BUTIK KASIR\n       REKAP PENJUALAN\n=====================================\n");
+        String sep = "─────────────────────────────────────\n";
+        sb.append("=====================================\n");
+        sb.append("  ").append(namaToko.toUpperCase()).append("\n");
+        sb.append("       REKAP PENJUALAN\n");
+        sb.append("=====================================\n");
         sb.append("Kasir   : ").append(kasir).append("\n");
         sb.append("Periode : ").append(buildPeriodLabel()).append("\n");
         if (!"Semua".equals(filterKategori)) sb.append("Kategori: ").append(filterKategori).append("\n");
-        if (!"Semua".equals(filterKasir))    sb.append("Filter Kasir: ").append(filterKasir).append("\n");
+        if (!"Semua".equals(filterKasir))    sb.append("Filter  : ").append(filterKasir).append("\n");
         sb.append("Dicetak : ").append(now).append("\n");
-        sb.append("-------------------------------------\n");
-        sb.append(String.format("%-20s: %s\n", "Total Pendapatan", CurrencyFormatter.formatRupiah(totalPendapatan)));
-        sb.append(String.format("%-20s: %d transaksi\n", "Total Transaksi", totalCount));
-        sb.append(String.format("%-20s: %s\n", "Rata-rata / Trx", CurrencyFormatter.formatRupiah(rata)));
-        sb.append("-------------------------------------\nBREAKDOWN PEMBAYARAN\n");
+        sb.append(sep);
 
+        sb.append("RINGKASAN\n");
+        sb.append(String.format("%-18s: %s\n", "Total Pendapatan", CurrencyFormatter.formatRupiah(totalPendapatan)));
+        sb.append(String.format("%-18s: %d transaksi\n", "Total Transaksi", totalCount));
+        sb.append(String.format("%-18s: %s\n", "Rata-rata / Trx", CurrencyFormatter.formatRupiah(rata)));
+        sb.append(String.format("%-18s: %d trx  %s\n", "Lunas", countLunas, CurrencyFormatter.formatRupiah(totalLunas)));
+        if (countHutang > 0)
+            sb.append(String.format("%-18s: %d trx\n", "Hutang", countHutang));
+        sb.append(sep);
+
+        sb.append("METODE PEMBAYARAN\n");
         Cursor mc = dbHelper.getMetodeSummaryFiltered(filterFrom, filterTo, filterKasir);
         if (mc != null && mc.moveToFirst()) {
             do {
                 int pct = totalPendapatan > 0 ? (int)(mc.getDouble(2) / totalPendapatan * 100) : 0;
-                sb.append(String.format("• %-16s: %d trx  %s  (%d%%)\n", mc.getString(0), mc.getInt(1),
+                sb.append(String.format("• %-14s %d trx  %s  (%d%%)\n",
+                    shortenMetode(mc.getString(0)), mc.getInt(1),
                     CurrencyFormatter.formatRupiah(mc.getDouble(2)), pct));
             } while (mc.moveToNext());
             mc.close();
         }
+        sb.append(sep);
 
         Map<String, Integer> itemMap = new HashMap<>();
         Pattern pat = Pattern.compile("([^(]+)\\([^)]+\\)x(\\d+)");
@@ -585,13 +614,29 @@ public class RekapLaporanActivity extends AppCompatActivity {
         if (!itemMap.isEmpty()) {
             List<Map.Entry<String, Integer>> sorted = new ArrayList<>(itemMap.entrySet());
             sorted.sort((a, b) -> b.getValue() - a.getValue());
-            sb.append("-------------------------------------\nITEM TERLARIS\n");
+            sb.append("ITEM TERLARIS\n");
             int rank = 1;
             for (Map.Entry<String, Integer> e : sorted.subList(0, Math.min(5, sorted.size())))
                 sb.append(rank++).append(". ").append(e.getKey()).append(" — ").append(e.getValue()).append(" pcs\n");
+            sb.append(sep);
         }
 
-        sb.append("=====================================\nTOTAL: ").append(CurrencyFormatter.formatRupiah(totalPendapatan)).append("\n=====================================\nDibuat oleh BUTIK KASIR App");
+        sb.append("RIWAYAT TRANSAKSI\n");
+        int no = 1;
+        for (Transaksi t : listTransaksi) {
+            String rawTgl = t.getTanggal();
+            String tglFmt = rawTgl != null && rawTgl.length() >= 16
+                    ? rawTgl.substring(5, 10).replace("-", "/") + " " + rawTgl.substring(11, 16) : "-";
+            sb.append(String.format("%2d. %s  %-14s  %-7s  %s\n",
+                no++, tglFmt,
+                shortenMetode(t.getMetodePembayaran()),
+                "HUTANG".equals(t.getStatus()) ? "HUTANG" : "LUNAS",
+                CurrencyFormatter.formatRupiah(t.getTotalBelanja())));
+        }
+        sb.append("=====================================\n");
+        sb.append("TOTAL  : ").append(CurrencyFormatter.formatRupiah(totalPendapatan)).append("\n");
+        sb.append("=====================================\n");
+        sb.append(namaToko).append("  •  ").append(now);
         return sb.toString();
     }
 
@@ -634,16 +679,19 @@ public class RekapLaporanActivity extends AppCompatActivity {
         final int W = 595, H = 842, M = 40;
         android.graphics.pdf.PdfDocument pdf = new android.graphics.pdf.PdfDocument();
 
-        Paint pPink  = mkPaint(18f, Color.parseColor("#E91E63"), true, Paint.Align.CENTER);
-        Paint pGrayC = mkPaint(10f, Color.parseColor("#757575"), false, Paint.Align.CENTER);
-        Paint pSec   = mkPaint(11f, Color.parseColor("#E91E63"), true, Paint.Align.LEFT);
-        Paint pBold  = mkPaint(10f, Color.parseColor("#212121"), true, Paint.Align.LEFT);
-        Paint pNorm  = mkPaint(10f, Color.parseColor("#212121"), false, Paint.Align.LEFT);
-        Paint pGray  = mkPaint(9f,  Color.parseColor("#757575"), false, Paint.Align.LEFT);
-        Paint pBoldR = mkPaint(10f, Color.parseColor("#212121"), true, Paint.Align.RIGHT);
-        Paint pPinkR = mkPaint(11f, Color.parseColor("#E91E63"), true, Paint.Align.RIGHT);
-        Paint pLine  = new Paint(); pLine.setColor(Color.parseColor("#DDDDDD")); pLine.setStrokeWidth(0.5f);
-        Paint pDark  = new Paint(); pDark.setColor(Color.parseColor("#AAAAAA")); pDark.setStrokeWidth(0.5f);
+        // Paint definitions
+        Paint pTitle  = mkPaint(20f, Color.parseColor("#E91E63"), true,  Paint.Align.CENTER);
+        Paint pSubC   = mkPaint(9f,  Color.parseColor("#757575"), false, Paint.Align.CENTER);
+        Paint pSec    = mkPaint(10f, Color.parseColor("#E91E63"), true,  Paint.Align.LEFT);
+        Paint pBold   = mkPaint(9f,  Color.parseColor("#212121"), true,  Paint.Align.LEFT);
+        Paint pNorm   = mkPaint(9f,  Color.parseColor("#212121"), false, Paint.Align.LEFT);
+        Paint pGray   = mkPaint(8f,  Color.parseColor("#757575"), false, Paint.Align.LEFT);
+        Paint pBoldR  = mkPaint(9f,  Color.parseColor("#212121"), true,  Paint.Align.RIGHT);
+        Paint pPinkR  = mkPaint(11f, Color.parseColor("#E91E63"), true,  Paint.Align.RIGHT);
+        Paint pGreen  = mkPaint(8f,  Color.parseColor("#388E3C"), true,  Paint.Align.LEFT);
+        Paint pRed    = mkPaint(8f,  Color.parseColor("#F44336"), true,  Paint.Align.LEFT);
+        Paint pLine   = new Paint(); pLine.setColor(Color.parseColor("#EEEEEE")); pLine.setStrokeWidth(0.5f);
+        Paint pDark   = new Paint(); pDark.setColor(Color.parseColor("#BDBDBD")); pDark.setStrokeWidth(0.7f);
 
         int[] pgNum = {0};
         android.graphics.pdf.PdfDocument.Page[] pg = {null};
@@ -653,90 +701,243 @@ public class RekapLaporanActivity extends AppCompatActivity {
         Runnable newPage = () -> {
             if (pg[0] != null) pdf.finishPage(pg[0]);
             pg[0] = pdf.startPage(new android.graphics.pdf.PdfDocument.PageInfo.Builder(W, H, ++pgNum[0]).create());
-            cv[0] = pg[0].getCanvas(); y[0] = M;
+            cv[0] = pg[0].getCanvas();
+            y[0] = M;
         };
         newPage.run();
 
+        String namaToko = dbHelper.getPengaturan("nama_toko");
+        if (namaToko == null || namaToko.isEmpty()) namaToko = "BUTIK KASIR";
         String kasir  = getSharedPreferences("ButikSession", MODE_PRIVATE).getString("namaKasir", "Kasir");
-        String now    = new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id","ID")).format(new Date());
+        String now    = new SimpleDateFormat("dd MMM yyyy, HH:mm", new Locale("id", "ID")).format(new Date());
         String period = buildPeriodLabel();
 
-        y[0] += 16; cv[0].drawText("BUTIK KASIR", W / 2f, y[0], pPink);
-        y[0] += 14; cv[0].drawText("REKAP PENJUALAN", W / 2f, y[0], pGrayC);
-        y[0] += 12; cv[0].drawText("Periode: " + period, W / 2f, y[0], pGrayC);
-        y[0] += 11; cv[0].drawText("Kasir: " + kasir + "  |  " + now, W / 2f, y[0], pGrayC);
-        y[0] += 10; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 14;
+        // ── HEADER ──────────────────────────────────────────────────
+        y[0] += 20;
+        cv[0].drawText(namaToko.toUpperCase(), W / 2f, y[0], pTitle);
+        y[0] += 13; cv[0].drawText("REKAP PENJUALAN", W / 2f, y[0], pSubC);
+        y[0] += 11; cv[0].drawText("Periode: " + period, W / 2f, y[0], pSubC);
+        y[0] += 10; cv[0].drawText("Kasir: " + kasir + "   |   " + now, W / 2f, y[0], pSubC);
+        y[0] += 12; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 14;
 
-        cv[0].drawText("RINGKASAN", M, y[0], pSec); y[0] += 14;
-        cv[0].drawText("Total Pendapatan  : " + CurrencyFormatter.formatRupiah(totalPendapatan), M, y[0], pBold); y[0] += 13;
-        cv[0].drawText("Total Transaksi   : " + totalCount + " transaksi", M, y[0], pNorm); y[0] += 13;
-        cv[0].drawText("Rata-rata / Trx   : " + CurrencyFormatter.formatRupiah(totalCount > 0 ? totalPendapatan / totalCount : 0), M, y[0], pNorm); y[0] += 13;
+        // ── RINGKASAN STATISTIK ──────────────────────────────────────
+        cv[0].drawText("RINGKASAN", M, y[0], pSec); y[0] += 13;
 
+        double rata = totalCount > 0 ? totalPendapatan / totalCount : 0;
+        // Hitung lunas vs hutang
+        double totalLunas = 0; int countLunas = 0, countHutang = 0;
+        for (Transaksi t : listTransaksi) {
+            if ("HUTANG".equals(t.getStatus())) countHutang++;
+            else { totalLunas += t.getTotalBelanja(); countLunas++; }
+        }
+
+        // Baris stat: 2 kolom
+        int col1 = M, col2 = M + 260;
+        cv[0].drawText("Total Pendapatan", col1, y[0], pBold);
+        cv[0].drawText(CurrencyFormatter.formatRupiah(totalPendapatan), col2, y[0], pBold);
+        y[0] += 12;
+        cv[0].drawText("Total Transaksi", col1, y[0], pNorm);
+        cv[0].drawText(totalCount + " transaksi", col2, y[0], pNorm);
+        y[0] += 12;
+        cv[0].drawText("Rata-rata / Trx", col1, y[0], pNorm);
+        cv[0].drawText(CurrencyFormatter.formatRupiah(rata), col2, y[0], pNorm);
+        y[0] += 12;
+        cv[0].drawText("Lunas", col1, y[0], pNorm);
+        cv[0].drawText(countLunas + " trx  " + CurrencyFormatter.formatRupiah(totalLunas), col2, y[0], pNorm);
+        y[0] += 12;
+        if (countHutang > 0) {
+            cv[0].drawText("Hutang (Belum Lunas)", col1, y[0], pNorm);
+            cv[0].drawText(countHutang + " trx", col2, y[0], pNorm);
+            y[0] += 12;
+        }
+        y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pLine); y[0] += 12;
+
+        // ── BREAKDOWN METODE PEMBAYARAN ──────────────────────────────
+        cv[0].drawText("METODE PEMBAYARAN", M, y[0], pSec); y[0] += 13;
         Cursor mc = dbHelper.getMetodeSummaryFiltered(filterFrom, filterTo, filterKasir);
         if (mc != null && mc.moveToFirst()) {
-            cv[0].drawText("Metode Pembayaran:", M, y[0], pBold); y[0] += 13;
+            // header mini-tabel
+            cv[0].drawText("Metode", M, y[0], pBold);
+            cv[0].drawText("Trx", M + 260, y[0], pBold);
+            cv[0].drawText("Total", M + 310, y[0], pBold);
+            cv[0].drawText("%", W - M, y[0], pBoldR);
+            y[0] += 3; cv[0].drawLine(M, y[0], W - M, y[0], pLine); y[0] += 10;
             do {
-                int pct = totalPendapatan > 0 ? (int)(mc.getDouble(2) / totalPendapatan * 100) : 0;
-                cv[0].drawText("  • " + mc.getString(0) + " : " + mc.getInt(1) + " trx  " +
-                    CurrencyFormatter.formatRupiah(mc.getDouble(2)) + "  (" + pct + "%)", M + 6, y[0], pNorm);
-                y[0] += 12;
+                String met = mc.getString(0);
+                String metShort = shortenMetode(met);
+                int pct = totalPendapatan > 0 ? (int) Math.round(mc.getDouble(2) / totalPendapatan * 100) : 0;
+                cv[0].drawText(metShort, M, y[0], pNorm);
+                cv[0].drawText(String.valueOf(mc.getInt(1)), M + 260, y[0], pNorm);
+                cv[0].drawText(CurrencyFormatter.formatRupiah(mc.getDouble(2)), M + 310, y[0], pNorm);
+                cv[0].drawText(pct + "%", W - M, y[0], pBoldR);
+                y[0] += 3; cv[0].drawLine(M, y[0], W - M, y[0], pLine); y[0] += 10;
             } while (mc.moveToNext());
             mc.close();
         }
+        y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pLine); y[0] += 12;
 
+        // ── ITEM TERLARIS ────────────────────────────────────────────
         Map<String, Integer> itemMap = new LinkedHashMap<>();
         Pattern pat = Pattern.compile("([^(]+)\\([^)]+\\)x(\\d+)");
         for (Transaksi t : listTransaksi) {
             if (t.getDetailBarang() == null) continue;
             Matcher mat = pat.matcher(t.getDetailBarang());
-            while (mat.find()) itemMap.put(mat.group(1).trim(), itemMap.getOrDefault(mat.group(1).trim(), 0) + Integer.parseInt(mat.group(2)));
+            while (mat.find()) {
+                String nm = mat.group(1).trim();
+                itemMap.put(nm, itemMap.getOrDefault(nm, 0) + Integer.parseInt(mat.group(2)));
+            }
         }
         if (!itemMap.isEmpty()) {
             List<Map.Entry<String, Integer>> sorted = new ArrayList<>(itemMap.entrySet());
             sorted.sort((a, b) -> b.getValue() - a.getValue());
-            cv[0].drawText("Item Terlaris:", M, y[0], pBold); y[0] += 13;
+            sorted = sorted.subList(0, Math.min(5, sorted.size()));
+            cv[0].drawText("ITEM TERLARIS", M, y[0], pSec); y[0] += 13;
             int rk = 1;
-            for (Map.Entry<String, Integer> e : sorted.subList(0, Math.min(5, sorted.size()))) {
-                cv[0].drawText("  " + rk++ + ". " + e.getKey() + " — " + e.getValue() + " pcs", M + 6, y[0], pNorm); y[0] += 12;
+            for (Map.Entry<String, Integer> e : sorted) {
+                cv[0].drawText(rk + ". " + e.getKey(), M, y[0], pNorm);
+                cv[0].drawText(e.getValue() + " pcs", W - M, y[0], pBoldR);
+                y[0] += 11; rk++;
             }
+            y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pLine); y[0] += 12;
         }
-        y[0] += 6; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 14;
 
-        cv[0].drawText("RIWAYAT TRANSAKSI", M, y[0], pSec); y[0] += 14;
-        int cNo = M, cTgl = M + 22, cMet = M + 170, cTot = W - M;
-        cv[0].drawText("No", cNo, y[0], pBold); cv[0].drawText("Tanggal", cTgl, y[0], pBold);
-        cv[0].drawText("Metode", cMet, y[0], pBold); cv[0].drawText("Total", cTot, y[0], pBoldR);
-        y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 12;
+        // ── RIWAYAT TRANSAKSI ────────────────────────────────────────
+        cv[0].drawText("RIWAYAT TRANSAKSI", M, y[0], pSec); y[0] += 13;
 
+        // Kolom: No | Tanggal | Barang | Metode | Status | Total
+        final int cNo  = M;           // 40
+        final int cTgl = M + 20;      // 60  — "dd/MM HH:mm"
+        final int cBrg = M + 85;      // 125 — nama barang (lebar 190px)
+        final int cMet = M + 275;     // 315 — metode pembayaran (lebar 105px)
+        final int cStt = M + 380;     // 420 — status lunas/hutang
+        final int cTot = W - M;       // 555 — total (right-aligned)
+
+        Runnable drawTableHeader = () -> {
+            cv[0].drawText("No",      cNo,  y[0], pBold);
+            cv[0].drawText("Tanggal", cTgl, y[0], pBold);
+            cv[0].drawText("Barang",  cBrg, y[0], pBold);
+            cv[0].drawText("Metode",  cMet, y[0], pBold);
+            cv[0].drawText("Status",  cStt, y[0], pBold);
+            cv[0].drawText("Total",   cTot, y[0], pBoldR);
+            y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 11;
+        };
+        drawTableHeader.run();
+
+        Pattern ptnItem = Pattern.compile("([^(]+)\\(([^)]+)\\)x(\\d+)");
+        Paint pBrgPaint = mkPaint(7f, Color.parseColor("#616161"), false, Paint.Align.LEFT);
+        final float brgMaxW = cMet - cBrg - 6;   // lebar kolom Barang
+
+        final float metMaxW = cStt - cMet - 6;
         int no = 1;
         for (Transaksi t : listTransaksi) {
-            if (y[0] + 14 > H - M) {
-                pGrayC.setTextAlign(Paint.Align.CENTER);
-                cv[0].drawText("Halaman " + pgNum[0], W / 2f, H - M - 4, pGrayC);
-                newPage.run();
-                cv[0].drawText("No", cNo, y[0], pBold); cv[0].drawText("Tanggal", cTgl, y[0], pBold);
-                cv[0].drawText("Metode", cMet, y[0], pBold); cv[0].drawText("Total", cTot, y[0], pBoldR);
-                y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 12;
+            // Parse item list
+            java.util.List<String> items = new java.util.ArrayList<>();
+            String det = t.getDetailBarang();
+            if (det != null && !det.isEmpty()) {
+                Matcher mIt = ptnItem.matcher(det);
+                while (mIt.find()) {
+                    String nama = mIt.group(1).trim().replaceAll("^[,\\s]+", "");
+                    String qty  = mIt.group(3).trim();
+                    if (nama.isEmpty()) continue;
+                    String line = nama + " ×" + qty;
+                    // Truncate to fit kolom Barang
+                    if (pBrgPaint.measureText(line) > brgMaxW) {
+                        while (line.length() > 1 && pBrgPaint.measureText(line + "..") > brgMaxW)
+                            line = line.substring(0, line.length() - 1).trim();
+                        line = line + "..";
+                    }
+                    items.add(line);
+                }
             }
-            String tgl = t.getTanggal(); if (tgl != null && tgl.length() > 19) tgl = tgl.substring(0, 19);
-            String met = t.getMetodePembayaran(); if (met != null && met.length() > 14) met = met.substring(0, 13) + "..";
-            cv[0].drawText(String.valueOf(no++), cNo, y[0], pGray);
-            cv[0].drawText(tgl != null ? tgl : "-", cTgl, y[0], pNorm);
-            cv[0].drawText(met != null ? met : "-", cMet, y[0], pNorm);
+            if (items.isEmpty()) items.add("-");
+
+            // Total tinggi baris = 1 baris utama + baris item ke-2 dst
+            int extraLines = Math.max(0, items.size() - 1);
+            int rowH = 12 + extraLines * 9;
+
+            if (y[0] + rowH + 4 > H - M - 20) {
+                Paint pFoot2 = mkPaint(7f, Color.parseColor("#9E9E9E"), false, Paint.Align.CENTER);
+                cv[0].drawText("Halaman " + pgNum[0] + "  —  " + namaToko, W / 2f, H - M + 4, pFoot2);
+                newPage.run();
+                drawTableHeader.run();
+            }
+
+            // Format tanggal
+            String rawTgl = t.getTanggal();
+            String tglFmt = "-";
+            if (rawTgl != null && rawTgl.length() >= 16)
+                tglFmt = rawTgl.substring(5, 10).replace("-", "/") + " " + rawTgl.substring(11, 16);
+
+            String met = shortenMetode(t.getMetodePembayaran());
+            if (pNorm.measureText(met) > metMaxW) met = met.substring(0, Math.min(met.length(), 14)) + "..";
+
+            boolean hutang = "HUTANG".equals(t.getStatus());
+
+            // Baris utama: semua kolom + item pertama di kolom Barang
+            cv[0].drawText(String.valueOf(no++), cNo,  y[0], pGray);
+            cv[0].drawText(tglFmt,               cTgl, y[0], pNorm);
+            cv[0].drawText(items.get(0),         cBrg, y[0], pBrgPaint);
+            cv[0].drawText(met,                  cMet, y[0], pNorm);
+            cv[0].drawText(hutang ? "HUTANG" : "LUNAS", cStt, y[0], hutang ? pRed : pGreen);
             cv[0].drawText(CurrencyFormatter.formatRupiah(t.getTotalBelanja()), cTot, y[0], pBoldR);
-            y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pLine); y[0] += 11;
+            y[0] += 9;
+
+            // Item ke-2 dan seterusnya: hanya kolom Barang, sisanya kosong
+            for (int i = 1; i < items.size(); i++) {
+                cv[0].drawText(items.get(i), cBrg, y[0], pBrgPaint);
+                y[0] += 9;
+            }
+
+            y[0] += 3; cv[0].drawLine(M, y[0], W - M, y[0], pLine); y[0] += 9;
         }
 
-        if (y[0] + 30 > H - M) newPage.run();
-        cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 13;
+        // ── TOTAL AKHIR ──────────────────────────────────────────────
+        if (y[0] + 32 > H - M) newPage.run();
+        y[0] += 4; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 14;
         cv[0].drawText("TOTAL PENDAPATAN", M, y[0], pSec);
         cv[0].drawText(CurrencyFormatter.formatRupiah(totalPendapatan), cTot, y[0], pPinkR);
-        y[0] += 16; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 12;
-        Paint pFoot = mkPaint(8f, Color.parseColor("#9E9E9E"), false, Paint.Align.CENTER);
-        cv[0].drawText("Rekap Penjualan  •  BUTIK KASIR App  •  " + now, W / 2f, y[0], pFoot);
+        y[0] += 14; cv[0].drawLine(M, y[0], W - M, y[0], pDark); y[0] += 12;
+
+        Paint pFoot = mkPaint(7.5f, Color.parseColor("#9E9E9E"), false, Paint.Align.CENTER);
+        cv[0].drawText("Rekap Penjualan  •  " + namaToko + "  •  " + now, W / 2f, y[0], pFoot);
 
         pdf.finishPage(pg[0]);
         return pdf;
+    }
+
+    private String buildItemSummary(Pattern ptn, String detail) {
+        if (detail == null || detail.isEmpty()) return "";
+        Matcher m = ptn.matcher(detail);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            // Strip leading commas/spaces from nama (detail_barang separator)
+            String nama = m.group(1).trim().replaceAll("^[,\\s]+", "");
+            String qty  = m.group(3).trim();
+            if (nama.isEmpty()) continue;
+            if (nama.length() > 18) nama = nama.substring(0, 17) + ".";
+            if (sb.length() > 0) sb.append("   ");
+            sb.append(nama).append(" ×").append(qty);
+        }
+        return sb.toString();
+    }
+
+    private String shortenMetode(String m) {
+        if (m == null) return "-";
+        String lo = m.toLowerCase();
+        if (lo.startsWith("split")) {
+            // "Split — Tunai: Rp X + QRIS: Rp Y" → "Split (Tunai+QRIS)"
+            return "Split (Tunai+QRIS)";
+        }
+        if (lo.contains("qris") && lo.contains("(")) {
+            // "QRIS (ShopeePay)" → "QRIS - ShopeePay"
+            int s = m.indexOf('('), e = m.indexOf(')');
+            if (s > 0 && e > s) return "QRIS - " + m.substring(s + 1, e).trim();
+        }
+        if (lo.contains("debit") || lo.contains("kredit")) {
+            // "Debit/Kredit - Visa" → keep as-is (short enough)
+            return m.length() > 20 ? m.substring(0, 19) + ".." : m;
+        }
+        return m;
     }
 
     private Paint mkPaint(float sz, int color, boolean bold, Paint.Align align) {
@@ -748,4 +949,69 @@ public class RekapLaporanActivity extends AppCompatActivity {
     }
 
     private int dpToPx(int dp) { return Math.round(getResources().getDisplayMetrics().density * dp); }
+
+    private void showDetail(Transaksi t) {
+        com.google.android.material.bottomsheet.BottomSheetDialog sheet =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        android.view.View root = getLayoutInflater().inflate(R.layout.layout_detail_riwayat, null);
+        sheet.setContentView(root);
+
+        ((android.widget.TextView) root.findViewById(R.id.detailRiwayatTvId))
+                .setText("TRX #" + t.getIdTransaksi());
+        ((android.widget.TextView) root.findViewById(R.id.detailRiwayatTvTanggal))
+                .setText(t.getTanggal() != null ? t.getTanggal() : "-");
+        ((android.widget.TextView) root.findViewById(R.id.detailRiwayatTvTotal))
+                .setText(com.example.butikkasir.utils.CurrencyFormatter.formatRupiah(t.getTotalBelanja()));
+        ((android.widget.TextView) root.findViewById(R.id.detailRiwayatTvMetode))
+                .setText(t.getMetodePembayaran() != null ? t.getMetodePembayaran() : "-");
+        ((android.widget.TextView) root.findViewById(R.id.detailRiwayatTvKasir))
+                .setText(t.getNamaKasir() != null ? t.getNamaKasir() : "-");
+
+        android.widget.TextView tvStatus = root.findViewById(R.id.detailRiwayatTvStatus);
+        boolean hutang = "HUTANG".equals(t.getStatus());
+        tvStatus.setText(hutang ? "HUTANG" : "LUNAS");
+        GradientDrawable badge = new GradientDrawable();
+        badge.setCornerRadius(dpToPx(6));
+        badge.setColor(hutang ? Color.parseColor("#FF5722") : Color.parseColor("#4CAF50"));
+        tvStatus.setBackground(badge);
+
+        LinearLayout itemContainer = root.findViewById(R.id.detailRiwayatItemContainer);
+        itemContainer.removeAllViews();
+        String detail = t.getDetailBarang();
+        if (detail != null && !detail.isEmpty()) {
+            Matcher mat = Pattern.compile("([^(]+)\\(([^)]+)\\)x(\\d+)").matcher(detail);
+            boolean any = false;
+            while (mat.find()) {
+                any = true;
+                String nama = mat.group(1).trim().replaceAll("^[,\\s]+", "");
+                String ukuran = mat.group(2).trim();
+                String qty = mat.group(3).trim();
+                android.widget.TextView tv = new android.widget.TextView(this);
+                tv.setText("• " + nama + " (" + ukuran + ")  ×" + qty);
+                tv.setTextColor(Color.parseColor("#424242"));
+                tv.setTextSize(13f);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.bottomMargin = dpToPx(4);
+                tv.setLayoutParams(lp);
+                itemContainer.addView(tv);
+            }
+            if (!any) {
+                android.widget.TextView tv = new android.widget.TextView(this);
+                tv.setText(detail);
+                tv.setTextColor(Color.parseColor("#757575"));
+                tv.setTextSize(13f);
+                itemContainer.addView(tv);
+            }
+        } else {
+            android.widget.TextView tv = new android.widget.TextView(this);
+            tv.setText("—");
+            tv.setTextColor(Color.parseColor("#9E9E9E"));
+            tv.setTextSize(13f);
+            itemContainer.addView(tv);
+        }
+
+        root.findViewById(R.id.detailRiwayatBtnTutup).setOnClickListener(v -> sheet.dismiss());
+        sheet.show();
+    }
 }

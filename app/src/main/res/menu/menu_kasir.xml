@@ -9,7 +9,7 @@
 
     <item
         android:id="@+id/action_laporan"
-        android:title="Laporan Penjualan"
+        android:title="Rekap Penjualan"
         app:showAsAction="never" />
 
     <item

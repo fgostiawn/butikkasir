@@ -63,10 +63,6 @@ public class PaymentActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private Pelanggan pelanggan = null;
 
-    // split payment state
-    private double splitTunaiAmt = 0;
-    private double splitQrisAmt = 0;
-
     private String namaToko;
     private String nomorWa;
     private String tagline;
@@ -127,8 +123,6 @@ public class PaymentActivity extends AppCompatActivity {
         findViewById(R.id.payBtnCash).setOnClickListener(v -> dialogCash());
         findViewById(R.id.payBtnDebit).setOnClickListener(v -> dialogDebit());
         findViewById(R.id.payBtnQris).setOnClickListener(v -> dialogPilihEWallet());
-        findViewById(R.id.payBtnSplit).setOnClickListener(v -> dialogSplitPayment());
-        findViewById(R.id.payBtnHutang).setOnClickListener(v -> dialogHutang());
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -510,127 +504,6 @@ public class PaymentActivity extends AppCompatActivity {
             .show();
     }
 
-    private void dialogSplitPayment() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 20, 50, 20);
-
-        TextView tvInfo = new TextView(this);
-        tvInfo.setText("Total: " + CurrencyFormatter.formatRupiah(totalAkhir)
-                + "\nMasukkan jumlah yang dibayar tunai:");
-        tvInfo.setTextColor(Color.parseColor("#424242"));
-        tvInfo.setTextSize(14f);
-        LinearLayout.LayoutParams tvLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        tvLp.bottomMargin = dpToPx(12);
-        tvInfo.setLayoutParams(tvLp);
-
-        final TextInputEditText etTunai = new TextInputEditText(this);
-        etTunai.setInputType(InputType.TYPE_CLASS_PHONE);
-        etTunai.setHint("Nominal tunai (Rp)");
-
-        final TextView tvSisa = new TextView(this);
-        tvSisa.setText("Sisa via QRIS: Rp 0");
-        tvSisa.setTextColor(Color.parseColor("#1565C0"));
-        tvSisa.setTextSize(14f);
-        LinearLayout.LayoutParams sisaLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        sisaLp.topMargin = dpToPx(8);
-        tvSisa.setLayoutParams(sisaLp);
-
-        etTunai.addTextChangedListener(new TextWatcher() {
-            private String current = "";
-            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
-            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.toString().equals(current)) return;
-                etTunai.removeTextChangedListener(this);
-                String clean = s.toString().replaceAll("[.,\\s]", "");
-                String formatted = "";
-                if (!clean.isEmpty()) {
-                    DecimalFormat fmt = new DecimalFormat("#,###");
-                    DecimalFormatSymbols sym = new DecimalFormatSymbols();
-                    sym.setGroupingSeparator('.');
-                    fmt.setDecimalFormatSymbols(sym);
-                    formatted = fmt.format(Long.parseLong(clean));
-                    double tunai = Double.parseDouble(clean);
-                    double sisa = totalAkhir - tunai;
-                    tvSisa.setText("Sisa via QRIS: " + CurrencyFormatter.formatRupiah(Math.max(0, sisa)));
-                } else {
-                    tvSisa.setText("Sisa via QRIS: Rp 0");
-                }
-                current = formatted;
-                etTunai.setText(formatted);
-                etTunai.setSelection(formatted.length());
-                etTunai.addTextChangedListener(this);
-            }
-        });
-
-        layout.addView(tvInfo);
-        layout.addView(etTunai);
-        layout.addView(tvSisa);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Split Payment")
-            .setView(layout)
-            .setPositiveButton("Konfirmasi", null)
-            .setNegativeButton("Batal", null)
-            .create();
-
-        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String cleanTunai = etTunai.getText() != null
-                    ? etTunai.getText().toString().replaceAll("[.,\\s]", "") : "";
-            if (cleanTunai.isEmpty()) {
-                Toast.makeText(this, "Masukkan nominal tunai", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            double tunaiAmt = Double.parseDouble(cleanTunai);
-            if (tunaiAmt <= 0 || tunaiAmt >= totalAkhir) {
-                Toast.makeText(this,
-                        "Nominal tunai harus antara Rp 1 dan " + CurrencyFormatter.formatRupiah(totalAkhir),
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            splitTunaiAmt = tunaiAmt;
-            splitQrisAmt = totalAkhir - tunaiAmt;
-            dialog.dismiss();
-
-            // Buka halaman QRIS untuk membayar sisa
-            Intent intent = new Intent(this, QrisActivity.class);
-            intent.putExtra("IS_SPLIT", true);
-            intent.putExtra("EWALLET", "QRIS");
-            intent.putExtra("TOTAL_BELANJA", splitQrisAmt);
-            intent.putExtra("DETAIL_TRANSAKSI", detailTransaksi);
-            intent.putExtra("CART_ITEMS", new ArrayList<>(cartItems));
-            startActivityForResult(intent, 201);
-        }));
-
-        dialog.show();
-    }
-
-    private void dialogHutang() {
-        if (pelanggan == null) {
-            Toast.makeText(this,
-                    "Pilih pelanggan terlebih dahulu untuk mencatat hutang",
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        new AlertDialog.Builder(this)
-            .setTitle("Bayar Nanti (Hutang)")
-            .setMessage("Catat transaksi Rp " + CurrencyFormatter.formatRupiah(totalAkhir)
-                    + " sebagai hutang atas nama " + pelanggan.getNama()
-                    + "?\n\nStok akan langsung dikurangi. Admin dapat menandai lunas nanti.")
-            .setPositiveButton("Catat Hutang", (d, w) -> {
-                long transId = dbHelper.insertTransaksiDanKurangiStokFull(
-                        totalAkhir, "Hutang", detailTransaksi, kasirName(),
-                        "HUTANG", pelangganId(), cartItems);
-                tampilkanStruk(transId, "Hutang", 0, 0, "HUTANG");
-            })
-            .setNegativeButton("Batal", null)
-            .show();
-    }
 
     // ──────────────────────────────────────────────────────────────
     //  Struk (receipt) bottom sheet
@@ -991,21 +864,11 @@ public class PaymentActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 200 && resultCode == RESULT_OK) {
-            // QRIS normal
+            // QRIS selesai
             updatePoinPelanggan();
             markVoucherUsed();
             setResult(RESULT_OK);
             finish();
-        } else if (requestCode == 201 && resultCode == RESULT_OK) {
-            // Split payment: QRIS selesai, simpan transaksi sekarang
-            String metode = "Split — Tunai: " + CurrencyFormatter.formatRupiah(splitTunaiAmt)
-                    + " + QRIS: " + CurrencyFormatter.formatRupiah(splitQrisAmt);
-            long transId = dbHelper.insertTransaksiDanKurangiStokFull(
-                    totalAkhir, metode, detailTransaksi, kasirName(),
-                    "LUNAS", pelangganId(), cartItems);
-            updatePoinPelanggan();
-            markVoucherUsed();
-            tampilkanStruk(transId, metode, splitTunaiAmt, 0, "LUNAS");
         }
     }
 }

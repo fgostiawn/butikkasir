@@ -7,18 +7,25 @@ public class Transaksi {
     private String metodePembayaran;
     private String detailBarang;
     private String namaKasir;
+    private String status;
 
     public Transaksi(int idTransaksi, String tanggal, double totalBelanja, String metodePembayaran, String detailBarang) {
-        this(idTransaksi, tanggal, totalBelanja, metodePembayaran, detailBarang, "Kasir");
+        this(idTransaksi, tanggal, totalBelanja, metodePembayaran, detailBarang, "Kasir", "LUNAS");
     }
 
     public Transaksi(int idTransaksi, String tanggal, double totalBelanja, String metodePembayaran, String detailBarang, String namaKasir) {
+        this(idTransaksi, tanggal, totalBelanja, metodePembayaran, detailBarang, namaKasir, "LUNAS");
+    }
+
+    public Transaksi(int idTransaksi, String tanggal, double totalBelanja, String metodePembayaran,
+                     String detailBarang, String namaKasir, String status) {
         this.idTransaksi = idTransaksi;
         this.tanggal = tanggal;
         this.totalBelanja = totalBelanja;
         this.metodePembayaran = metodePembayaran;
         this.detailBarang = detailBarang;
         this.namaKasir = namaKasir != null ? namaKasir : "Kasir";
+        this.status = status != null ? status : "LUNAS";
     }
 
     public int getIdTransaksi() { return idTransaksi; }
@@ -27,4 +34,5 @@ public class Transaksi {
     public String getMetodePembayaran() { return metodePembayaran; }
     public String getDetailBarang() { return detailBarang; }
     public String getNamaKasir() { return namaKasir; }
+    public String getStatus() { return status; }
 }
